@@ -44,6 +44,11 @@ input[type=range]{width:100%;accent-color:var(--ac);margin:12px 0 4px}
 <header>Doc<span>Scan</span><small>Scan • Crop • Enhance • PDF &nbsp;|&nbsp; Created by Adarsh Routh</small></header>
 <main>
 
+<button class="btn btn-secondary" id="btnFullscreen" onclick="enterAppMode()" style="width: 100%; margin-bottom: 10px;">
+  <i data-lucide="maximize"></i> Fullscreen App Mode
+</button>
+  
+  
 <div id="home" class="card hero">
   <div class="ic">📄</div><h2>Start a new scan</h2>
   <p>Place your document on a flat surface. You can also pick several photos from the gallery at once.</p>
@@ -103,6 +108,31 @@ input[type=range]{width:100%;accent-color:var(--ac);margin:12px 0 4px}
   <button class="danger" id="sx">Cancel</button></div></div>
 
 <script>
+
+function enterAppMode() {
+  const elem = document.documentElement;
+
+  if (!document.fullscreenElement) {
+    if (elem.requestFullscreen) {
+      elem.requestFullscreen();
+    } else if (elem.webkitRequestFullscreen) {
+      elem.webkitRequestFullscreen();
+    } else if (elem.msRequestFullscreen) {
+      elem.msRequestFullscreen();
+    }
+    document.getElementById('btnFullscreen').innerHTML = '<i data-lucide="minimize"></i> Exit Fullscreen';
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    }
+    document.getElementById('btnFullscreen').innerHTML = '<i data-lucide="maximize"></i> Fullscreen App Mode';
+  }
+  lucide.createIcons();
+}
+  
+  
 const $=id=>document.getElementById(id);
 const MAXPX=4000,tick=()=>new Promise(r=>setTimeout(r,20));
 const STEPS=[[.5,.8,'Compact'],[.65,.85,'Small'],[.8,.9,'Balanced'],[1,.95,'High'],[1,1,'Max quality']];
