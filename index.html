@@ -1,758 +1,458 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>DocScan Pro | High-Res Scanner</title>
-  
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/lucide@latest"></script>
-
-  <!-- OpenCV.js & jsPDF -->
-  <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();" type="text/javascript"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
-  <style>
-    :root {
-      --primary: #4f46e5;
-      --primary-hover: #4338ca;
-      --bg: #090d16;
-      --surface: rgba(22, 30, 46, 0.85);
-      --border: rgba(255, 255, 255, 0.12);
-      --text: #f8fafc;
-      --text-muted: #94a3b8;
-      --success: #10b981;
-      --accent: #06b6d4;
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      touch-action: manipulation;
-    }
-
-    body {
-      background: radial-gradient(circle at top, #1e1b4b 0%, var(--bg) 100%);
-      color: var(--text);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 16px 12px;
-    }
-
-    header {
-      text-align: center;
-      margin-bottom: 16px;
-    }
-
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 12px;
-      border-radius: 9999px;
-      background: rgba(79, 70, 229, 0.2);
-      border: 1px solid rgba(79, 70, 229, 0.4);
-      font-size: 12px;
-      font-weight: 500;
-      color: #c7d2fe;
-      margin-bottom: 8px;
-    }
-
-    .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #fbbf24;
-      animation: pulse 1.5s infinite;
-    }
-    .dot.ready { background: var(--success); animation: none; }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(0.85); }
-    }
-
-    h1 {
-      font-size: 22px;
-      font-weight: 700;
-      letter-spacing: -0.5px;
-      color: #f1f5f9;
-    }
-
-    .app-card {
-      width: 100%;
-      max-width: 500px;
-      background: var(--surface);
-      backdrop-filter: blur(20px);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 16px;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    /* Container for Canvas / Camera */
-    .viewer {
-      position: relative;
-      width: 100%;
-      aspect-ratio: 3 / 4;
-      border-radius: 14px;
-      overflow: hidden;
-      background: #000;
-      border: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    video {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: none;
-    }
-
-    /* Interactive overlay for corner dragging */
-    #cropCanvas, #outputCanvas {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      display: none;
-    }
-
-    .empty-state {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-      color: var(--text-muted);
-      font-size: 13px;
-      text-align: center;
-      padding: 16px;
-    }
-
-    .controls {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .btn-group {
-      display: flex;
-      gap: 8px;
-      width: 100%;
-    }
-
-    .btn {
-      flex: 1;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      padding: 12px 14px;
-      border-radius: 12px;
-      border: 1px solid transparent;
-      font-size: 13.5px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      color: #fff;
-    }
-
-    .btn:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-      transform: none !important;
-    }
-
-    .btn:active:not(:disabled) {
-      transform: scale(0.97);
-    }
-
-    .btn-primary {
-      background: var(--primary);
-      box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
-    }
-    .btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
-
-    .btn-secondary {
-      background: rgba(255, 255, 255, 0.08);
-      border-color: var(--border);
-      color: #e2e8f0;
-    }
-    .btn-secondary:hover:not(:disabled) { background: rgba(255, 255, 255, 0.12); }
-
-    .btn-success {
-      background: var(--success);
-      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
-    }
-    .btn-success:hover:not(:disabled) { background: #059669; }
-
-    .btn-accent {
-      background: #0284c7;
-      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3);
-    }
-    .btn-accent:hover:not(:disabled) { background: #0369a1; }
-
-    /* Filters toggler bar */
-    .filter-bar {
-      display: none;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-    }
-
-    .filter-chip {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--border);
-      color: var(--text-muted);
-      padding: 6px 12px;
-      border-radius: 9999px;
-      font-size: 12px;
-      font-weight: 500;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .filter-chip.active {
-      background: rgba(79, 70, 229, 0.25);
-      border-color: var(--primary);
-      color: #fff;
-    }
-  </style>
-</head>
-<body>
-
-  <header>
-    <div class="badge">
-      <span class="dot" id="cvStatusDot"></span>
-      <span id="cvStatusText">Vision Engine Loading...</span>
-    </div>
-    <h1>Smart Document Scanner</h1>
-  </header>
-
-  <main class="app-card">
-    <div class="viewer" id="viewerBox">
-      <div id="placeholder" class="empty-state">
-        <i data-lucide="camera" style="width: 40px; height: 40px;"></i>
-        <span>Camera chalu karein ya photo upload karein</span>
-      </div>
-
-      <video id="video" autoplay playsinline muted></video>
-      <!-- Canvas for Manual Edge Point Adjustment -->
-      <canvas id="cropCanvas"></canvas>
-      <!-- Canvas for Final Cropped & Filtered Output -->
-      <canvas id="outputCanvas"></canvas>
-    </div>
-
-    <!-- Hidden Raw Image Canvas -->
-    <canvas id="rawCanvas" style="display: none;"></canvas>
-
-    <!-- Filters Bar -->
-    <div class="filter-bar" id="filterBar">
-      <span class="filter-chip active" id="chipColor" onclick="applyFilter('color')">Original</span>
-      <span class="filter-chip" id="chipMagic" onclick="applyFilter('magic')">Clean Magic</span>
-      <span class="filter-chip" id="chipBw" onclick="applyFilter('bw')">High B&W</span>
-    </div>
-
-    <div class="controls">
-      <!-- Step 1: Input Options -->
-      <div class="btn-group" id="inputActionGroup">
-        <button id="btnCamera" class="btn btn-primary" onclick="initCamera()" disabled>
-          <i data-lucide="video"></i> Open Camera
-        </button>
-        <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()" id="btnUpload" disabled>
-          <i data-lucide="upload"></i> Upload
-        </button>
-        <input type="file" id="fileInput" accept="image/*" style="display: none;">
-      </div>
-
-      <!-- Step 2: Snap Photo -->
-      <button id="btnCapture" class="btn btn-primary" onclick="captureSnapshot()" style="display: none;">
-        <i data-lucide="camera"></i> Capture Document
-      </button>
-
-      <!-- Step 3: Confirm Edge Cropping -->
-      <div class="btn-group" id="confirmActionGroup" style="display: none;">
-        <button class="btn btn-secondary" onclick="resetAll()">
-          <i data-lucide="x"></i> Cancel
-        </button>
-        <button class="btn btn-accent" onclick="applyPerspectiveCrop()">
-          <i data-lucide="crop"></i> Confirm Crop
-        </button>
-      </div>
-
-      <!-- Step 4: Final Output Actions (PDF, Share, Retake) -->
-      <div class="btn-group" id="exportActionGroup" style="display: none;">
-        <button class="btn btn-secondary" onclick="resetAll()">
-          <i data-lucide="rotate-ccw"></i> Retake
-        </button>
-        <button class="btn btn-accent" onclick="sharePDF()">
-          <i data-lucide="share-2"></i> Share
-        </button>
-        <button class="btn btn-success" onclick="downloadPDF()">
-          <i data-lucide="file-down"></i> Save PDF
-        </button>
-      </div>
-    </div>
-  </main>
-
-  <script>
-    lucide.createIcons();
-
-    const video = document.getElementById('video');
-    const cropCanvas = document.getElementById('cropCanvas');
-    const outputCanvas = document.getElementById('outputCanvas');
-    const rawCanvas = document.getElementById('rawCanvas');
-    const placeholder = document.getElementById('placeholder');
-    const filterBar = document.getElementById('filterBar');
-
-    const btnCamera = document.getElementById('btnCamera');
-    const btnUpload = document.getElementById('btnUpload');
-    const btnCapture = document.getElementById('btnCapture');
-    const inputActionGroup = document.getElementById('inputActionGroup');
-    const confirmActionGroup = document.getElementById('confirmActionGroup');
-    const exportActionGroup = document.getElementById('exportActionGroup');
-    const fileInput = document.getElementById('fileInput');
-
-    let stream = null;
-    let fullImageBitmap = null;
-    let corners = []; // [{x, y}, ...]
-    let activeCornerIndex = -1;
-    let croppedMatColor = null;
-
-    // 1. OpenCV Loaded
-    function onOpenCvReady() {
-      document.getElementById('cvStatusDot').classList.add('ready');
-      document.getElementById('cvStatusText').innerText = "Vision Engine Ready";
-      btnCamera.disabled = false;
-      btnUpload.disabled = false;
-    }
-
-    // 2. Camera Handling with Resolution Preference
-    async function initCamera() {
-      try {
-        const constraints = {
-          video: {
-            facingMode: { ideal: "environment" },
-            width: { ideal: 2560 }, // Maximum available high-res
-            height: { ideal: 1440 }
-          },
-          audio: false
-        };
-
-        try {
-          stream = await navigator.mediaDevices.getUserMedia(constraints);
-        } catch {
-          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-        }
-
-        video.srcObject = stream;
-        await video.play();
-
-        video.style.display = "block";
-        placeholder.style.display = "none";
-        cropCanvas.style.display = "none";
-        outputCanvas.style.display = "none";
-
-        inputActionGroup.style.display = "none";
-        btnCapture.style.display = "inline-flex";
-      } catch (err) {
-        alert("Camera error: " + err.message);
-      }
-    }
-
-    // 3. File Upload Handling
-    fileInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-          stopCamera();
-          setupImageForCrop(img);
-        };
-        img.src = event.target.result;
-      };
-      reader.readAsDataURL(file);
-    });
-
-    // 4. Capture Frame
-    function captureSnapshot() {
-      rawCanvas.width = video.videoWidth || 1920;
-      rawCanvas.height = video.videoHeight || 1080;
-      const ctx = rawCanvas.getContext('2d');
-      ctx.drawImage(video, 0, 0, rawCanvas.width, rawCanvas.height);
-
-      stopCamera();
-      setupImageForCrop(rawCanvas);
-    }
-
-    function stopCamera() {
-      if (stream) {
-        stream.getTracks().forEach(t => t.stop());
-        stream = null;
-      }
-      video.style.display = "none";
-      btnCapture.style.display = "none";
-    }
-
-    // 5. Automatic Edge Detection with Adjustable Crop UI
-    function setupImageForCrop(sourceElement) {
-      // High-res offscreen store
-      rawCanvas.width = sourceElement.naturalWidth || sourceElement.videoWidth || sourceElement.width;
-      rawCanvas.height = sourceElement.naturalHeight || sourceElement.videoHeight || sourceElement.height;
-      const rCtx = rawCanvas.getContext('2d');
-      rCtx.drawImage(sourceElement, 0, 0);
-
-      placeholder.style.display = "none";
-      cropCanvas.style.display = "block";
-
-      // Display size matches raw canvas
-      cropCanvas.width = rawCanvas.width;
-      cropCanvas.height = rawCanvas.height;
-
-      // Detect edges via OpenCV
-      detectDocumentCorners();
-
-      // Show interactive overlay
-      drawCropInterface();
-      attachPointDragger();
-
-      inputActionGroup.style.display = "none";
-      confirmActionGroup.style.display = "flex";
-    }
-
-    function detectDocumentCorners() {
-      const w = rawCanvas.width;
-      const h = rawCanvas.height;
-
-      try {
-        let src = cv.imread(rawCanvas);
-        let gray = new cv.Mat();
-        let blurred = new cv.Mat();
-        let edged = new cv.Mat();
-
-        cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
-        cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
-        cv.Canny(blurred, edged, 60, 180);
-
-        let contours = new cv.MatVector();
-        let hierarchy = new cv.Mat();
-        cv.findContours(edged, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
-
-        let maxArea = 0;
-        let bestPoly = null;
-
-        for (let i = 0; i < contours.size(); ++i) {
-          let cnt = contours.get(i);
-          let area = cv.contourArea(cnt);
-          if (area > (w * h * 0.08)) { // Minimum 8% of screen area
-            let peri = cv.arcLength(cnt, true);
-            let approx = new cv.Mat();
-            cv.approxPolyDP(cnt, approx, 0.02 * peri, true);
-
-            if (approx.rows === 4 && area > maxArea) {
-              maxArea = area;
-              if (bestPoly) bestPoly.delete();
-              bestPoly = approx.clone();
-            }
-            approx.delete();
-          }
-        }
-
-        if (bestPoly) {
-          let pts = [];
-          for (let i = 0; i < 4; i++) {
-            pts.push({ x: bestPoly.data32S[i * 2], y: bestPoly.data32S[i * 2 + 1] });
-          }
-          corners = sortFourPoints(pts);
-          bestPoly.delete();
-        } else {
-          // Default fallbacks with 10% margins
-          corners = [
-            { x: w * 0.1, y: h * 0.1 },
-            { x: w * 0.9, y: h * 0.1 },
-            { x: w * 0.9, y: h * 0.9 },
-            { x: w * 0.1, y: h * 0.9 }
-          ];
-        }
-
-        src.delete(); gray.delete(); blurred.delete(); edged.delete();
-        contours.delete(); hierarchy.delete();
-      } catch (e) {
-        console.error("OpenCV detection error:", e);
-        corners = [
-          { x: w * 0.1, y: h * 0.1 },
-          { x: w * 0.9, y: h * 0.1 },
-          { x: w * 0.9, y: h * 0.9 },
-          { x: w * 0.1, y: h * 0.9 }
-        ];
-      }
-    }
-
-    function sortFourPoints(pts) {
-      pts.sort((a, b) => a.y - b.y);
-      let top = [pts[0], pts[1]].sort((a, b) => a.x - b.x);
-      let bottom = [pts[2], pts[3]].sort((a, b) => a.x - b.x);
-      return [top[0], top[1], bottom[1], bottom[0]]; // TL, TR, BR, BL
-    }
-
-    // 6. Draw Crop Overlay (Lines + Magnified Draggable Points)
-    function drawCropInterface() {
-      const ctx = cropCanvas.getContext('2d');
-      ctx.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
-      ctx.drawImage(rawCanvas, 0, 0);
-
-      // Dark shroud outside crop
-      ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
-      ctx.fillRect(0, 0, cropCanvas.width, cropCanvas.height);
-
-      // Clear polygon interior
-      ctx.save();
-      ctx.beginPath();
-      ctx.moveTo(corners[0].x, corners[0].y);
-      for (let i = 1; i < 4; i++) ctx.lineTo(corners[i].x, corners[i].y);
-      ctx.closePath();
-      ctx.clip();
-      ctx.drawImage(rawCanvas, 0, 0);
-      ctx.restore();
-
-      // Border Lines
-      ctx.strokeStyle = "#4f46e5";
-      ctx.lineWidth = Math.max(cropCanvas.width * 0.005, 4);
-      ctx.beginPath();
-      ctx.moveTo(corners[0].x, corners[0].y);
-      for (let i = 1; i < 4; i++) ctx.lineTo(corners[i].x, corners[i].y);
-      ctx.closePath();
-      ctx.stroke();
-
-      // Handles / Corner circles
-      const radius = Math.max(cropCanvas.width * 0.02, 16);
-      corners.forEach((pt, i) => {
-        ctx.fillStyle = "#ffffff";
-        ctx.beginPath();
-        ctx.arc(pt.x, pt.y, radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.lineWidth = radius * 0.3;
-        ctx.strokeStyle = "#4f46e5";
-        ctx.stroke();
-      });
-    }
-
-    // 7. Interactive Corner Dragging (Touch + Mouse Support)
-    function attachPointDragger() {
-      let isDragging = false;
-
-      function getCoords(e) {
-        const rect = cropCanvas.getBoundingClientRect();
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        const scaleX = cropCanvas.width / rect.width;
-        const scaleY = cropCanvas.height / rect.height;
-        return {
-          x: (clientX - rect.left) * scaleX,
-          y: (clientY - rect.top) * scaleY
-        };
-      }
-
-      function onStart(e) {
-        const { x, y } = getCoords(e);
-        const threshold = Math.max(cropCanvas.width * 0.09, 60);
-
-        activeCornerIndex = -1;
-        corners.forEach((pt, i) => {
-          let dist = Math.hypot(pt.x - x, pt.y - y);
-          if (dist < threshold) activeCornerIndex = i;
-        });
-
-        if (activeCornerIndex !== -1) {
-          isDragging = true;
-          e.preventDefault();
-        }
-      }
-
-      function onMove(e) {
-        if (!isDragging || activeCornerIndex === -1) return;
-        const { x, y } = getCoords(e);
-        corners[activeCornerIndex] = {
-          x: Math.max(0, Math.min(cropCanvas.width, x)),
-          y: Math.max(0, Math.min(cropCanvas.height, y))
-        };
-        drawCropInterface();
-        e.preventDefault();
-      }
-
-      function onEnd() {
-        isDragging = false;
-        activeCornerIndex = -1;
-      }
-
-      cropCanvas.onmousedown = onStart;
-      window.onmousemove = onMove;
-      window.onmouseup = onEnd;
-
-      cropCanvas.ontouchstart = onStart;
-      window.ontouchmove = onMove;
-      window.ontouchend = onEnd;
-    }
-
-    // 8. Confirm Crop -> Perspective Transform
-    function applyPerspectiveCrop() {
-      let src = cv.imread(rawCanvas);
-
-      let [tl, tr, br, bl] = corners;
-      let widthTop = Math.hypot(tr.x - tl.x, tr.y - tl.y);
-      let widthBottom = Math.hypot(br.x - bl.x, br.y - bl.y);
-      let maxWidth = Math.max(widthTop, widthBottom);
-
-      let heightLeft = Math.hypot(tl.x - bl.x, tl.y - bl.y);
-      let heightRight = Math.hypot(tr.x - br.x, tr.y - br.y);
-      let maxHeight = Math.max(heightLeft, heightRight);
-
-      let srcCoords = cv.matFromArray(4, 1, cv.CV_32FC2, [tl.x, tl.y, tr.x, tr.y, br.x, br.y, bl.x, bl.y]);
-      let dstCoords = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, maxWidth, 0, maxWidth, maxHeight, 0, maxHeight]);
-
-      let M = cv.getPerspectiveTransform(srcCoords, dstCoords);
-      let dst = new cv.Mat();
-      cv.warpPerspective(src, dst, M, new cv.Size(maxWidth, maxHeight), cv.INTER_LANCZOS4, cv.BORDER_CONSTANT, new cv.Scalar());
-
-      if (croppedMatColor) croppedMatColor.delete();
-      croppedMatColor = dst.clone();
-
-      cv.imshow(outputCanvas, dst);
-
-      // Cleanup
-      src.delete(); srcCoords.delete(); dstCoords.delete(); M.delete(); dst.delete();
-
-      cropCanvas.style.display = "none";
-      outputCanvas.style.display = "block";
-      confirmActionGroup.style.display = "none";
-      filterBar.style.display = "flex";
-      exportActionGroup.style.display = "flex";
-
-      // Select default clean filter
-      applyFilter('color');
-    }
-
-    // 9. Document Enhancements / Filters
-    function applyFilter(mode) {
-      if (!croppedMatColor) return;
-
-      document.getElementById('chipColor').classList.toggle('active', mode === 'color');
-      document.getElementById('chipMagic').classList.toggle('active', mode === 'magic');
-      document.getElementById('chipBw').classList.toggle('active', mode === 'bw');
-
-      if (mode === 'color') {
-        cv.imshow(outputCanvas, croppedMatColor);
-      } else if (mode === 'magic') {
-        // Boost contrast & brighten paper background
-        let result = new cv.Mat();
-        croppedMatColor.convertTo(result, -1, 1.25, 20); // alpha = 1.25, beta = 20
-        cv.imshow(outputCanvas, result);
-        result.delete();
-      } else if (mode === 'bw') {
-        let gray = new cv.Mat();
-        let bw = new cv.Mat();
-        cv.cvtColor(croppedMatColor, gray, cv.COLOR_RGBA2GRAY, 0);
-        // Crisp high-contrast binarization
-        cv.adaptiveThreshold(gray, bw, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 21, 12);
-        cv.imshow(outputCanvas, bw);
-        gray.delete(); bw.delete();
-      }
-    }
-
-    // 10. Generate High-Res PDF (A4 Ratio Preserved)
-    function buildPdfBlob() {
-      const { jsPDF } = window.jspdf;
-      // High-resolution image generation
-      const imgData = outputCanvas.toDataURL('image/jpeg', 0.98);
-
-      const isLandscape = outputCanvas.width > outputCanvas.height;
-      const doc = new jsPDF({
-        orientation: isLandscape ? 'landscape' : 'portrait',
-        unit: 'mm',
-        format: 'a4',
-        compress: true
-      });
-
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      const margin = 8; // 8mm sleek margin
-
-      const printableW = pageWidth - (margin * 2);
-      const printableH = pageHeight - (margin * 2);
-
-      let renderW = printableW;
-      let renderH = (outputCanvas.height * renderW) / outputCanvas.width;
-
-      if (renderH > printableH) {
-        renderH = printableH;
-        renderW = (outputCanvas.width * renderH) / outputCanvas.height;
-      }
-
-      // Center image on A4 sheet
-      const posX = margin + (printableW - renderW) / 2;
-      const posY = margin + (printableH - renderH) / 2;
-
-      doc.addImage(imgData, 'JPEG', posX, posY, renderW, renderH, undefined, 'FAST');
-      return doc;
-    }
-
-    function downloadPDF() {
-      const doc = buildPdfBlob();
-      doc.save(`Scan_${Date.now()}.pdf`);
-    }
-
-    // 11. Native Web Share (WhatsApp / Drive / Mail)
-    async function sharePDF() {
-      try {
-        const doc = buildPdfBlob();
-        const blob = doc.output('blob');
-        const file = new File([blob], `Scan_${Date.now()}.pdf`, { type: 'application/pdf' });
-
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            files: [file],
-            title: 'Scanned Document',
-            text: 'Here is your scanned PDF document.'
-          });
-        } else {
-          // If native file share is unsupported on device
-          downloadPDF();
-        }
-      } catch (err) {
-        if (err.name !== 'AbortError') {
-          downloadPDF();
-        }
-      }
-    }
-
-    // 12. Reset
-    function resetAll() {
-      if (croppedMatColor) {
-        croppedMatColor.delete();
-        croppedMatColor = null;
-      }
-      cropCanvas.style.display = "none";
-      outputCanvas.style.display = "none";
-      filterBar.style.display = "none";
-      confirmActionGroup.style.display = "none";
-      exportActionGroup.style.display = "none";
-      placeholder.style.display = "flex";
-      inputActionGroup.style.display = "flex";
-      fileInput.value = "";
-    }
-  </script>
-</body>
-</html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>DocScan</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{--bg:#0f1115;--card:#181b22;--tx:#eef1f6;--mut:#8b93a3;--ac:#22c55e}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px system-ui,sans-serif;min-height:100vh}
+header{padding:16px;font-weight:800;font-size:20px;max-width:640px;margin:auto}
+header span{color:var(--ac)}
+main{max-width:640px;margin:auto;padding:0 16px 40px}
+.card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:12px}
+button,.btn{background:var(--ac);color:#04210f;border:0;border-radius:12px;padding:14px;font-weight:700;font-size:15px;cursor:pointer;text-align:center;display:block}
+.sec{background:#262b36;color:var(--tx)}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.row>*{flex:1;min-width:120px}
+canvas{width:100%;display:block;border-radius:10px;background:#000;touch-action:none}
+.seg button{background:#262b36;color:var(--tx)}.seg button.on{background:var(--ac);color:#04210f}
+p{color:var(--mut);margin:0 0 12px;font-size:14px}
+select{width:100%;padding:12px;border-radius:12px;background:#262b36;color:var(--tx);border:0;margin-top:10px}
+.hide{display:none!important}
+input[type=file]{display:none}
+</style></head><body>
+<header>Doc<span>Scan</span></header>
+<main>
+
+<div id="s1" class="card">
+  <p>Document ko flat surface par rakho, achhi light me photo lo ya gallery se choose karo.</p>
+  <div class="row">
+    <label class="btn">📷 Camera<input type="file" accept="image/*" capture="environment" id="f1"></label>
+    <label class="btn sec">🖼 Gallery<input type="file" accept="image/*" id="f2"></label>
+  </div>
+  <p id="cnt" style="margin-top:12px"></p>
+</div>
+
+<div id="s2" class="card hide">
+  <p>Edges auto detect ho gaye. Green corners ko drag karke adjust karo, phir confirm karo.</p>
+  <canvas id="cv"></canvas>
+  <div class="row">
+    <button class="sec" id="redo">Auto-detect again</button>
+    <button id="ok">Confirm crop ✓</button>
+  </div>
+  <div class="row"><button class="sec" id="back1">Retake</button></div>
+</div>
+
+<div id="s3" class="card hide">
+  <canvas id="out"></canvas>
+  <div class="row seg"><button id="mc" class="on">Color</button><button id="mb">B&amp;W</button></div>
+  <select id="size">
+    <option value="a4">PDF size: A4 (auto fit)</option>
+    <option value="orig">PDF size: Original ratio</option>
+  </select>
+  <div class="row">
+    <button id="dl">⬇ Download PDF</button>
+    <button id="sh" class="sec">↗ Share</button>
+  </div>
+  <div class="row">
+    <button id="add" class="sec">+ Add page</button>
+    <button id="new" class="sec">New scan</button>
+  </div>
+  <p id="msg" style="margin-top:12px"></p>
+</div>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+const MAXPX=3300;
+let src,quad,scale=1,pages=[],warped,cur,mode='color',drag=-1;
+
+function show(id){['s1','s2','s3'].forEach(s=>$(s).classList.toggle('hide',s!==id));
+  $('cnt').textContent=pages.length?pages.length+' page(s) added':'';}
+
+async function load(file){
+  if(!file)return;
+  const url=URL.createObjectURL(file),img=new Image();img.src=url;await img.decode();
+  const k=Math.min(1,MAXPX/Math.max(img.naturalWidth,img.naturalHeight));
+  src=document.createElement('canvas');
+  src.width=Math.round(img.naturalWidth*k);src.height=Math.round(img.naturalHeight*k);
+  src.getContext('2d').drawImage(img,0,0,src.width,src.height);
+  URL.revokeObjectURL(url);
+  quad=detect(src);show('s2');draw();
+}
+$('f1').onchange=$('f2').onchange=e=>{load(e.target.files[0]);e.target.value=''};
+
+/* ---------- Edge detection (paper vs background, Otsu + largest blob) ---------- */
+function detect(c){
+  const k=200/Math.max(c.width,c.height),w=Math.round(c.width*k),h=Math.round(c.height*k);
+  const t=document.createElement('canvas');t.width=w;t.height=h;
+  const x=t.getContext('2d');x.drawImage(c,0,0,w,h);
+  const d=x.getImageData(0,0,w,h).data,n=w*h,g=new Uint8Array(n),hist=new Array(256).fill(0);
+  for(let i=0;i<n;i++){g[i]=.299*d[i*4]+.587*d[i*4+1]+.114*d[i*4+2];hist[g[i]]++}
+  let sum=0;for(let i=0;i<256;i++)sum+=i*hist[i];
+  let wb=0,sb=0,best=0,th=128;
+  for(let i=0;i<256;i++){wb+=hist[i];if(!wb)continue;const wf=n-wb;if(!wf)break;
+    sb+=i*hist[i];const v=wb*wf*Math.pow(sb/wb-(sum-sb)/wf,2);if(v>best){best=v;th=i}}
+  let m=new Uint8Array(n);for(let i=0;i<n;i++)m[i]=g[i]>th?1:0;
+  let bd=0,bt=0;
+  for(let i=0;i<w;i++){bd+=m[i]+m[(h-1)*w+i];bt+=2}
+  for(let j=0;j<h;j++){bd+=m[j*w]+m[j*w+w-1];bt+=2}
+  if(bd/bt>.5)for(let i=0;i<n;i++)m[i]^=1;
+  const lab=new Int32Array(n),st=new Int32Array(n);let id=0,bid=0,bc=0;
+  for(let s=0;s<n;s++){
+    if(!m[s]||lab[s])continue;
+    id++;let sp=0,cnt=0;st[sp++]=s;lab[s]=id;
+    while(sp){const p=st[--sp];cnt++;const px=p%w,py=(p/w)|0;
+      if(px>0&&m[p-1]&&!lab[p-1]){lab[p-1]=id;st[sp++]=p-1}
+      if(px<w-1&&m[p+1]&&!lab[p+1]){lab[p+1]=id;st[sp++]=p+1}
+      if(py>0&&m[p-w]&&!lab[p-w]){lab[p-w]=id;st[sp++]=p-w}
+      if(py<h-1&&m[p+w]&&!lab[p+w]){lab[p+w]=id;st[sp++]=p+w}}
+    if(cnt>bc){bc=cnt;bid=id}
+  }
+  const W=c.width,H=c.height,ins=.06;
+  const fb=[[W*ins,H*ins],[W*(1-ins),H*ins],[W*(1-ins),H*(1-ins)],[W*ins,H*(1-ins)]];
+  if(!bid||bc/n<.15||bc/n>.97)return fb;
+  let tl=[0,1e9],br=[0,-1e9],tr=[0,-1e9],bl=[0,1e9];
+  for(let p=0;p<n;p++){if(lab[p]!==bid)continue;const px=p%w,py=(p/w)|0,a=px+py,b=px-py;
+    if(a<tl[1])tl=[p,a];if(a>br[1])br=[p,a];if(b>tr[1])tr=[p,b];if(b<bl[1])bl=[p,b]}
+  return [tl,tr,br,bl].map(o=>[(o[0]%w)/k,((o[0]/w)|0)/k]);
+}
+
+/* ---------- Crop UI ---------- */
+const cv=$('cv');
+const ratio=()=>cv.width/cv.getBoundingClientRect().width;
+function draw(){
+  scale=Math.min(1,1000/Math.max(src.width,src.height));
+  cv.width=Math.round(src.width*scale);cv.height=Math.round(src.height*scale);
+  const x=cv.getContext('2d'),r=ratio(),P=quad.map(q=>[q[0]*scale,q[1]*scale]);
+  x.drawImage(src,0,0,cv.width,cv.height);
+  x.beginPath();x.rect(0,0,cv.width,cv.height);
+  P.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));x.closePath();
+  x.fillStyle='rgba(0,0,0,.5)';x.fill('evenodd');
+  x.beginPath();P.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));x.closePath();
+  x.strokeStyle='#22c55e';x.lineWidth=3*r;x.stroke();
+  P.forEach(p=>{x.beginPath();x.arc(p[0],p[1],13*r,0,7);x.fillStyle='#22c55e';x.fill();
+    x.lineWidth=2*r;x.strokeStyle='#fff';x.stroke()});
+}
+const pt=e=>{const b=cv.getBoundingClientRect(),r=ratio();return[(e.clientX-b.left)*r,(e.clientY-b.top)*r]};
+cv.onpointerdown=e=>{const p=pt(e);let bd=1e9;drag=-1;
+  quad.forEach((q,i)=>{const d=Math.hypot(q[0]*scale-p[0],q[1]*scale-p[1]);if(d<bd){bd=d;drag=i}});
+  if(bd>70*ratio())drag=-1;else cv.setPointerCapture(e.pointerId)};
+cv.onpointermove=e=>{if(drag<0)return;const p=pt(e);
+  quad[drag]=[Math.min(src.width,Math.max(0,p[0]/scale)),Math.min(src.height,Math.max(0,p[1]/scale))];draw()};
+cv.onpointerup=()=>drag=-1;
+$('redo').onclick=()=>{quad=detect(src);draw()};
+$('back1').onclick=()=>show('s1');
+
+/* ---------- Perspective warp (full resolution, bilinear) ---------- */
+function warp(){
+  const[p0,p1,p2,p3]=quad,dist=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
+  let W=(dist(p0,p1)+dist(p3,p2))/2,H=(dist(p0,p3)+dist(p1,p2))/2;
+  const k=Math.min(1,MAXPX/Math.max(W,H));W=Math.max(2,Math.round(W*k));H=Math.max(2,Math.round(H*k));
+  const[x0,y0]=p0,[x1,y1]=p1,[x2,y2]=p2,[x3,y3]=p3;
+  const dx1=x1-x2,dx2=x3-x2,dx3=x0-x1+x2-x3,dy1=y1-y2,dy2=y3-y2,dy3=y0-y1+y2-y3;
+  const den=dx1*dy2-dx2*dy1||1e-9,g=(dx3*dy2-dx2*dy3)/den,h=(dx1*dy3-dx3*dy1)/den;
+  const a=x1-x0+g*x1,b=x3-x0+h*x3,d=y1-y0+g*y1,e=y3-y0+h*y3;
+  const sw=src.width,sh=src.height,S=src.getContext('2d').getImageData(0,0,sw,sh).data;
+  const o=document.createElement('canvas');o.width=W;o.height=H;
+  const ox=o.getContext('2d'),od=ox.createImageData(W,H),O=od.data;
+  for(let y=0;y<H;y++){const v=y/(H-1);
+    for(let x=0;x<W;x++){const u=x/(W-1),q=g*u+h*v+1;
+      let sx=(a*u+b*v+x0)/q,sy=(d*u+e*v+y0)/q;
+      sx=Math.min(sw-1.001,Math.max(0,sx));sy=Math.min(sh-1.001,Math.max(0,sy));
+      const ix=sx|0,iy=sy|0,fx=sx-ix,fy=sy-iy,i=(iy*sw+ix)*4,j=i+sw*4,oi=(y*W+x)*4;
+      for(let c=0;c<3;c++)O[oi+c]=(S[i+c]*(1-fx)+S[i+4+c]*fx)*(1-fy)+(S[j+c]*(1-fx)+S[j+4+c]*fx)*fy;
+      O[oi+3]=255}}
+  ox.putImageData(od,0,0);return o;
+}
+
+/* ---------- Filters (local-mean shadow removal) ---------- */
+function filt(c,bw){
+  const w=c.width,h=c.height,id=c.getContext('2d').getImageData(0,0,w,h),d=id.data,W1=w+1;
+  const I=new Uint32Array(W1*(h+1)),G=new Uint8Array(w*h);
+  for(let y=0;y<h;y++){let r=0;for(let x=0;x<w;x++){const i=y*w+x,p=i*4;
+    G[i]=(d[p]*77+d[p+1]*150+d[p+2]*29)>>8;r+=G[i];I[(y+1)*W1+x+1]=I[y*W1+x+1]+r}}
+  const R=Math.max(12,(w/30)|0);
+  for(let y=0;y<h;y++){const a=Math.max(0,y-R),b=Math.min(h,y+R+1);
+    for(let x=0;x<w;x++){const l=Math.max(0,x-R),r=Math.min(w,x+R+1),
+      m=(I[b*W1+r]-I[a*W1+r]-I[b*W1+l]+I[a*W1+l])/((r-l)*(b-a)),p=(y*w+x)*4;
+      if(bw){const v=Math.min(1,Math.max(0,(G[y*w+x]/(m+1)-.72)/.18))*255;d[p]=d[p+1]=d[p+2]=v}
+      else{const k=Math.min(1.8,Math.max(1,235/(m+1)));
+        for(let q=0;q<3;q++)d[p+q]=(d[p+q]*k-128)*1.12+128}}}
+  const o=document.createElement('canvas');o.width=w;o.height=h;o.getContext('2d').putImageData(id,0,0);return o;
+}
+
+/* ---------- Result ---------- */
+function render(){
+  cur=filt(warped,mode==='bw');
+  const c=$('out');c.width=cur.width;c.height=cur.height;c.getContext('2d').drawImage(cur,0,0);
+  $('mc').classList.toggle('on',mode==='color');$('mb').classList.toggle('on',mode==='bw');
+  $('msg').textContent=(pages.length+1)+' page(s) in PDF';
+}
+$('ok').onclick=()=>{
+  $('ok').textContent='Processing…';
+  setTimeout(()=>{warped=warp();mode='color';show('s3');render();$('ok').textContent='Confirm crop ✓'},30);
+};
+$('mc').onclick=()=>{mode='color';render()};
+$('mb').onclick=()=>{mode='bw';render()};
+$('add').onclick=()=>{pages.push(cur);show('s1')};
+$('new').onclick=()=>{pages=[];show('s1')};
+
+function makePDF(){
+  const{jsPDF}=window.jspdf,all=pages.concat(cur),fmt=$('size').value;let doc;
+  all.forEach((c,i)=>{
+    const r=c.width/c.height;let pw,ph,iw,ih,ox=0,oy=0;
+    if(fmt==='a4'){[pw,ph]=r<1?[210,297]:[297,210];
+      const ar=Math.min(r,1/r);
+      if(Math.abs(ar-210/297)/(210/297)<.08){iw=pw;ih=ph}
+      else{const s=Math.min(pw/c.width,ph/c.height);iw=c.width*s;ih=c.height*s;ox=(pw-iw)/2;oy=(ph-ih)/2}}
+    else{pw=r<1?210:297;ph=pw/r;iw=pw;ih=ph}
+    const o=pw>ph?'l':'p';
+    if(!i)doc=new jsPDF({unit:'mm',format:[pw,ph],orientation:o,compress:false});else doc.addPage([pw,ph],o);
+    doc.addImage(c.toDataURL('image/jpeg',.95),'JPEG',ox,oy,iw,ih,undefined,'NONE');
+  });
+  return doc.output('blob');
+}
+const name=()=>'scan-'+new Date().toISOString().slice(0,10)+'.pdf';
+$('dl').onclick=()=>{
+  $('msg').textContent='PDF ban rahi hai…';
+  setTimeout(()=>{const u=URL.createObjectURL(makePDF()),a=document.createElement('a');
+    a.href=u;a.download=name();document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(u),5000);$('msg').textContent='Downloaded ✓'},30);
+};
+$('sh').onclick=async()=>{
+  const f=new File([makePDF()],name(),{type:'application/pdf'});
+  if(navigator.canShare&&navigator.canShare({files:[f]})){
+    try{await navigator.share({files:[f],title:'Scanned document'})}catch(e){}
+  }else $('msg').textContent='Is browser me share support nahi hai, Download use karo.';
+};
+</script></body></html>
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>DocScan</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{--bg:#0f1115;--card:#181b22;--tx:#eef1f6;--mut:#8b93a3;--ac:#22c55e}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px system-ui,sans-serif;min-height:100vh}
+header{padding:16px;font-weight:800;font-size:20px;max-width:640px;margin:auto}
+header span{color:var(--ac)}
+main{max-width:640px;margin:auto;padding:0 16px 40px}
+.card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:12px}
+button,.btn{background:var(--ac);color:#04210f;border:0;border-radius:12px;padding:14px;font-weight:700;font-size:15px;cursor:pointer;text-align:center;display:block}
+.sec{background:#262b36;color:var(--tx)}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.row>*{flex:1;min-width:120px}
+canvas{width:100%;display:block;border-radius:10px;background:#000;touch-action:none}
+.seg button{background:#262b36;color:var(--tx)}.seg button.on{background:var(--ac);color:#04210f}
+p{color:var(--mut);margin:0 0 12px;font-size:14px}
+select{width:100%;padding:12px;border-radius:12px;background:#262b36;color:var(--tx);border:0;margin-top:10px}
+.hide{display:none!important}
+input[type=file]{display:none}
+</style></head><body>
+<header>Doc<span>Scan</span></header>
+<main>
+
+<div id="s1" class="card">
+  <p>Document ko flat surface par rakho, achhi light me photo lo ya gallery se choose karo.</p>
+  <div class="row">
+    <label class="btn">📷 Camera<input type="file" accept="image/*" capture="environment" id="f1"></label>
+    <label class="btn sec">🖼 Gallery<input type="file" accept="image/*" id="f2"></label>
+  </div>
+  <p id="cnt" style="margin-top:12px"></p>
+</div>
+
+<div id="s2" class="card hide">
+  <p>Edges auto detect ho gaye. Green corners ko drag karke adjust karo, phir confirm karo.</p>
+  <canvas id="cv"></canvas>
+  <div class="row">
+    <button class="sec" id="redo">Auto-detect again</button>
+    <button id="ok">Confirm crop ✓</button>
+  </div>
+  <div class="row"><button class="sec" id="back1">Retake</button></div>
+</div>
+
+<div id="s3" class="card hide">
+  <canvas id="out"></canvas>
+  <div class="row seg"><button id="mc" class="on">Color</button><button id="mb">B&amp;W</button></div>
+  <select id="size">
+    <option value="a4">PDF size: A4 (auto fit)</option>
+    <option value="orig">PDF size: Original ratio</option>
+  </select>
+  <div class="row">
+    <button id="dl">⬇ Download PDF</button>
+    <button id="sh" class="sec">↗ Share</button>
+  </div>
+  <div class="row">
+    <button id="add" class="sec">+ Add page</button>
+    <button id="new" class="sec">New scan</button>
+  </div>
+  <p id="msg" style="margin-top:12px"></p>
+</div>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+const MAXPX=3300;
+let src,quad,scale=1,pages=[],warped,cur,mode='color',drag=-1;
+
+function show(id){['s1','s2','s3'].forEach(s=>$(s).classList.toggle('hide',s!==id));
+  $('cnt').textContent=pages.length?pages.length+' page(s) added':'';}
+
+async function load(file){
+  if(!file)return;
+  const url=URL.createObjectURL(file),img=new Image();img.src=url;await img.decode();
+  const k=Math.min(1,MAXPX/Math.max(img.naturalWidth,img.naturalHeight));
+  src=document.createElement('canvas');
+  src.width=Math.round(img.naturalWidth*k);src.height=Math.round(img.naturalHeight*k);
+  src.getContext('2d').drawImage(img,0,0,src.width,src.height);
+  URL.revokeObjectURL(url);
+  quad=detect(src);show('s2');draw();
+}
+$('f1').onchange=$('f2').onchange=e=>{load(e.target.files[0]);e.target.value=''};
+
+/* ---------- Edge detection (paper vs background, Otsu + largest blob) ---------- */
+function detect(c){
+  const k=200/Math.max(c.width,c.height),w=Math.round(c.width*k),h=Math.round(c.height*k);
+  const t=document.createElement('canvas');t.width=w;t.height=h;
+  const x=t.getContext('2d');x.drawImage(c,0,0,w,h);
+  const d=x.getImageData(0,0,w,h).data,n=w*h,g=new Uint8Array(n),hist=new Array(256).fill(0);
+  for(let i=0;i<n;i++){g[i]=.299*d[i*4]+.587*d[i*4+1]+.114*d[i*4+2];hist[g[i]]++}
+  let sum=0;for(let i=0;i<256;i++)sum+=i*hist[i];
+  let wb=0,sb=0,best=0,th=128;
+  for(let i=0;i<256;i++){wb+=hist[i];if(!wb)continue;const wf=n-wb;if(!wf)break;
+    sb+=i*hist[i];const v=wb*wf*Math.pow(sb/wb-(sum-sb)/wf,2);if(v>best){best=v;th=i}}
+  let m=new Uint8Array(n);for(let i=0;i<n;i++)m[i]=g[i]>th?1:0;
+  let bd=0,bt=0;
+  for(let i=0;i<w;i++){bd+=m[i]+m[(h-1)*w+i];bt+=2}
+  for(let j=0;j<h;j++){bd+=m[j*w]+m[j*w+w-1];bt+=2}
+  if(bd/bt>.5)for(let i=0;i<n;i++)m[i]^=1;
+  const lab=new Int32Array(n),st=new Int32Array(n);let id=0,bid=0,bc=0;
+  for(let s=0;s<n;s++){
+    if(!m[s]||lab[s])continue;
+    id++;let sp=0,cnt=0;st[sp++]=s;lab[s]=id;
+    while(sp){const p=st[--sp];cnt++;const px=p%w,py=(p/w)|0;
+      if(px>0&&m[p-1]&&!lab[p-1]){lab[p-1]=id;st[sp++]=p-1}
+      if(px<w-1&&m[p+1]&&!lab[p+1]){lab[p+1]=id;st[sp++]=p+1}
+      if(py>0&&m[p-w]&&!lab[p-w]){lab[p-w]=id;st[sp++]=p-w}
+      if(py<h-1&&m[p+w]&&!lab[p+w]){lab[p+w]=id;st[sp++]=p+w}}
+    if(cnt>bc){bc=cnt;bid=id}
+  }
+  const W=c.width,H=c.height,ins=.06;
+  const fb=[[W*ins,H*ins],[W*(1-ins),H*ins],[W*(1-ins),H*(1-ins)],[W*ins,H*(1-ins)]];
+  if(!bid||bc/n<.15||bc/n>.97)return fb;
+  let tl=[0,1e9],br=[0,-1e9],tr=[0,-1e9],bl=[0,1e9];
+  for(let p=0;p<n;p++){if(lab[p]!==bid)continue;const px=p%w,py=(p/w)|0,a=px+py,b=px-py;
+    if(a<tl[1])tl=[p,a];if(a>br[1])br=[p,a];if(b>tr[1])tr=[p,b];if(b<bl[1])bl=[p,b]}
+  return [tl,tr,br,bl].map(o=>[(o[0]%w)/k,((o[0]/w)|0)/k]);
+}
+
+/* ---------- Crop UI ---------- */
+const cv=$('cv');
+const ratio=()=>cv.width/cv.getBoundingClientRect().width;
+function draw(){
+  scale=Math.min(1,1000/Math.max(src.width,src.height));
+  cv.width=Math.round(src.width*scale);cv.height=Math.round(src.height*scale);
+  const x=cv.getContext('2d'),r=ratio(),P=quad.map(q=>[q[0]*scale,q[1]*scale]);
+  x.drawImage(src,0,0,cv.width,cv.height);
+  x.beginPath();x.rect(0,0,cv.width,cv.height);
+  P.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));x.closePath();
+  x.fillStyle='rgba(0,0,0,.5)';x.fill('evenodd');
+  x.beginPath();P.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));x.closePath();
+  x.strokeStyle='#22c55e';x.lineWidth=3*r;x.stroke();
+  P.forEach(p=>{x.beginPath();x.arc(p[0],p[1],13*r,0,7);x.fillStyle='#22c55e';x.fill();
+    x.lineWidth=2*r;x.strokeStyle='#fff';x.stroke()});
+}
+const pt=e=>{const b=cv.getBoundingClientRect(),r=ratio();return[(e.clientX-b.left)*r,(e.clientY-b.top)*r]};
+cv.onpointerdown=e=>{const p=pt(e);let bd=1e9;drag=-1;
+  quad.forEach((q,i)=>{const d=Math.hypot(q[0]*scale-p[0],q[1]*scale-p[1]);if(d<bd){bd=d;drag=i}});
+  if(bd>70*ratio())drag=-1;else cv.setPointerCapture(e.pointerId)};
+cv.onpointermove=e=>{if(drag<0)return;const p=pt(e);
+  quad[drag]=[Math.min(src.width,Math.max(0,p[0]/scale)),Math.min(src.height,Math.max(0,p[1]/scale))];draw()};
+cv.onpointerup=()=>drag=-1;
+$('redo').onclick=()=>{quad=detect(src);draw()};
+$('back1').onclick=()=>show('s1');
+
+/* ---------- Perspective warp (full resolution, bilinear) ---------- */
+function warp(){
+  const[p0,p1,p2,p3]=quad,dist=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
+  let W=(dist(p0,p1)+dist(p3,p2))/2,H=(dist(p0,p3)+dist(p1,p2))/2;
+  const k=Math.min(1,MAXPX/Math.max(W,H));W=Math.max(2,Math.round(W*k));H=Math.max(2,Math.round(H*k));
+  const[x0,y0]=p0,[x1,y1]=p1,[x2,y2]=p2,[x3,y3]=p3;
+  const dx1=x1-x2,dx2=x3-x2,dx3=x0-x1+x2-x3,dy1=y1-y2,dy2=y3-y2,dy3=y0-y1+y2-y3;
+  const den=dx1*dy2-dx2*dy1||1e-9,g=(dx3*dy2-dx2*dy3)/den,h=(dx1*dy3-dx3*dy1)/den;
+  const a=x1-x0+g*x1,b=x3-x0+h*x3,d=y1-y0+g*y1,e=y3-y0+h*y3;
+  const sw=src.width,sh=src.height,S=src.getContext('2d').getImageData(0,0,sw,sh).data;
+  const o=document.createElement('canvas');o.width=W;o.height=H;
+  const ox=o.getContext('2d'),od=ox.createImageData(W,H),O=od.data;
+  for(let y=0;y<H;y++){const v=y/(H-1);
+    for(let x=0;x<W;x++){const u=x/(W-1),q=g*u+h*v+1;
+      let sx=(a*u+b*v+x0)/q,sy=(d*u+e*v+y0)/q;
+      sx=Math.min(sw-1.001,Math.max(0,sx));sy=Math.min(sh-1.001,Math.max(0,sy));
+      const ix=sx|0,iy=sy|0,fx=sx-ix,fy=sy-iy,i=(iy*sw+ix)*4,j=i+sw*4,oi=(y*W+x)*4;
+      for(let c=0;c<3;c++)O[oi+c]=(S[i+c]*(1-fx)+S[i+4+c]*fx)*(1-fy)+(S[j+c]*(1-fx)+S[j+4+c]*fx)*fy;
+      O[oi+3]=255}}
+  ox.putImageData(od,0,0);return o;
+}
+
+/* ---------- Filters (local-mean shadow removal) ---------- */
+function filt(c,bw){
+  const w=c.width,h=c.height,id=c.getContext('2d').getImageData(0,0,w,h),d=id.data,W1=w+1;
+  const I=new Uint32Array(W1*(h+1)),G=new Uint8Array(w*h);
+  for(let y=0;y<h;y++){let r=0;for(let x=0;x<w;x++){const i=y*w+x,p=i*4;
+    G[i]=(d[p]*77+d[p+1]*150+d[p+2]*29)>>8;r+=G[i];I[(y+1)*W1+x+1]=I[y*W1+x+1]+r}}
+  const R=Math.max(12,(w/30)|0);
+  for(let y=0;y<h;y++){const a=Math.max(0,y-R),b=Math.min(h,y+R+1);
+    for(let x=0;x<w;x++){const l=Math.max(0,x-R),r=Math.min(w,x+R+1),
+      m=(I[b*W1+r]-I[a*W1+r]-I[b*W1+l]+I[a*W1+l])/((r-l)*(b-a)),p=(y*w+x)*4;
+      if(bw){const v=Math.min(1,Math.max(0,(G[y*w+x]/(m+1)-.72)/.18))*255;d[p]=d[p+1]=d[p+2]=v}
+      else{const k=Math.min(1.8,Math.max(1,235/(m+1)));
+        for(let q=0;q<3;q++)d[p+q]=(d[p+q]*k-128)*1.12+128}}}
+  const o=document.createElement('canvas');o.width=w;o.height=h;o.getContext('2d').putImageData(id,0,0);return o;
+}
+
+/* ---------- Result ---------- */
+function render(){
+  cur=filt(warped,mode==='bw');
+  const c=$('out');c.width=cur.width;c.height=cur.height;c.getContext('2d').drawImage(cur,0,0);
+  $('mc').classList.toggle('on',mode==='color');$('mb').classList.toggle('on',mode==='bw');
+  $('msg').textContent=(pages.length+1)+' page(s) in PDF';
+}
+$('ok').onclick=()=>{
+  $('ok').textContent='Processing…';
+  setTimeout(()=>{warped=warp();mode='color';show('s3');render();$('ok').textContent='Confirm crop ✓'},30);
+};
+$('mc').onclick=()=>{mode='color';render()};
+$('mb').onclick=()=>{mode='bw';render()};
+$('add').onclick=()=>{pages.push(cur);show('s1')};
+$('new').onclick=()=>{pages=[];show('s1')};
+
+function makePDF(){
+  const{jsPDF}=window.jspdf,all=pages.concat(cur),fmt=$('size').value;let doc;
+  all.forEach((c,i)=>{
+    const r=c.width/c.height;let pw,ph,iw,ih,ox=0,oy=0;
+    if(fmt==='a4'){[pw,ph]=r<1?[210,297]:[297,210];
+      const ar=Math.min(r,1/r);
+      if(Math.abs(ar-210/297)/(210/297)<.08){iw=pw;ih=ph}
+      else{const s=Math.min(pw/c.width,ph/c.height);iw=c.width*s;ih=c.height*s;ox=(pw-iw)/2;oy=(ph-ih)/2}}
+    else{pw=r<1?210:297;ph=pw/r;iw=pw;ih=ph}
+    const o=pw>ph?'l':'p';
+    if(!i)doc=new jsPDF({unit:'mm',format:[pw,ph],orientation:o,compress:false});else doc.addPage([pw,ph],o);
+    doc.addImage(c.toDataURL('image/jpeg',.95),'JPEG',ox,oy,iw,ih,undefined,'NONE');
+  });
+  return doc.output('blob');
+}
+const name=()=>'scan-'+new Date().toISOString().slice(0,10)+'.pdf';
+$('dl').onclick=()=>{
+  $('msg').textContent='PDF ban rahi hai…';
+  setTimeout(()=>{const u=URL.createObjectURL(makePDF()),a=document.createElement('a');
+    a.href=u;a.download=name();document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(u),5000);$('msg').textContent='Downloaded ✓'},30);
+};
+$('sh').onclick=async()=>{
+  const f=new File([makePDF()],name(),{type:'application/pdf'});
+  if(navigator.canShare&&navigator.canShare({files:[f]})){
+    try{await navigator.share({files:[f],title:'Scanned document'})}catch(e){}
+  }else $('msg').textContent='Is browser me share support nahi hai, Download use karo.';
+};
+</script></body></html>
