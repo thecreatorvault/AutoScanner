@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>DocScan Pro | High-Res Scanner</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- OpenCV.js & jsPDF -->
+  <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();" type="text/javascript"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --bg: #090d16;
+      --surface: rgba(22, 30, 46, 0.85);
+      --border: rgba(255, 255, 255, 0.12);
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --success: #10b981;
+      --accent: #06b6d4;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      touch-action: manipulation;
+    }
+
+    body {
+      background: radial-gradient(circle at top, #1e1b4b 0%, var(--bg) 100%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px 12px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      background: rgba(79, 70, 229, 0.2);
+      border: 1px solid rgba(79, 70, 229, 0.4);
+      font-size: 12px;
+      font-weight: 500;
+      color: #c7d2fe;
+      margin-bottom: 8px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #fbbf24;
+      animation: pulse 1.5s infinite;
+    }
+    .dot.ready { background: var(--success); animation: none; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: #f1f5f9;
+    }
+
+    .app-card {
+      width: 100%;
+      max-width: 500px;
+      background: var(--surface);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 16px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Container for Canvas / Camera */
+    .viewer {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 3 / 4;
+      border-radius: 14px;
+      overflow: hidden;
+      background: #000;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: none;
+    }
+
+    /* Interactive overlay for corner dragging */
+    #cropCanvas, #outputCanvas {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: none;
+    }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      color: var(--text-muted);
+      font-size: 13px;
+      text-align: center;
+      padding: 16px;
+    }
+
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .btn {
+      flex: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: #fff;
+    }
+
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    .btn:active:not(:disabled) {
+      transform: scale(0.97);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
+    }
+    .btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: var(--border);
+      color: #e2e8f0;
+    }
+    .btn-secondary:hover:not(:disabled) { background: rgba(255, 255, 255, 0.12); }
+
+    .btn-success {
+      background: var(--success);
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+    }
+    .btn-success:hover:not(:disabled) { background: #059669; }
+
+    .btn-accent {
+      background: #0284c7;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3);
+    }
+    .btn-accent:hover:not(:disabled) { background: #0369a1; }
+
+    /* Filters toggler bar */
+    .filter-bar {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .filter-chip {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 6px 12px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .filter-chip.active {
+      background: rgba(79, 70, 229, 0.25);
+      border-color: var(--primary);
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="badge">
+      <span class="dot" id="cvStatusDot"></span>
+      <span id="cvStatusText">Vision Engine Loading...</span>
+    </div>
+    <h1>Smart Document Scanner</h1>
+  </header>
+
+  <main class="app-card">
+    <div class="viewer" id="viewerBox">
+      <div id="placeholder" class="empty-state">
+        <i data-lucide="camera" style="width: 40px; height: 40px;"></i>
+        <span>Camera chalu karein ya photo upload karein</span>
+      </div>
+
+      <video id="video" autoplay playsinline muted></video>
+      <!-- Canvas for Manual Edge Point Adjustment -->
+      <canvas id="cropCanvas"></canvas>
+      <!-- Canvas for Final Cropped & Filtered Output -->
+      <canvas id="outputCanvas"></canvas>
+    </div>
+
+    <!-- Hidden Raw Image Canvas -->
+    <canvas id="rawCanvas" style="display: none;"></canvas>
+
+    <!-- Filters Bar -->
+    <div class="filter-bar" id="filterBar">
+      <span class="filter-chip active" id="chipColor" onclick="applyFilter('color')">Original</span>
+      <span class="filter-chip" id="chipMagic" onclick="applyFilter('magic')">Clean Magic</span>
+      <span class="filter-chip" id="chipBw" onclick="applyFilter('bw')">High B&W</span>
+    </div>
+
+    <div class="controls">
+      <!-- Step 1: Input Options -->
+      <div class="btn-group" id="inputActionGroup">
+        <button id="btnCamera" class="btn btn-primary" onclick="initCamera()" disabled>
+          <i data-lucide="video"></i> Open Camera
+        </button>
+        <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()" id="btnUpload" disabled>
+          <i data-lucide="upload"></i> Upload
+        </button>
+        <input type="file" id="fileInput" accept="image/*" style="display: none;">
+      </div>
+
+      <!-- Step 2: Snap Photo -->
+      <button id="btnCapture" class="btn btn-primary" onclick="captureSnapshot()" style="display: none;">
+        <i data-lucide="camera"></i> Capture Document
+      </button>
+
+      <!-- Step 3: Confirm Edge Cropping -->
+      <div class="btn-group" id="confirmActionGroup" style="display: none;">
+        <button class="btn btn-secondary" onclick="resetAll()">
+          <i data-lucide="x"></i> Cancel
+        </button>
+        <button class="btn btn-accent" onclick="applyPerspectiveCrop()">
+          <i data-lucide="crop"></i> Confirm Crop
+        </button>
+      </div>
+
+      <!-- Step 4: Final Output Actions (PDF, Share, Retake) -->
+      <div class="btn-group" id="exportActionGroup" style="display: none;">
+        <button class="btn btn-secondary" onclick="resetAll()">
+          <i data-lucide="rotate-ccw"></i> Retake
+        </button>
+        <button class="btn btn-accent" onclick="sharePDF()">
+          <i data-lucide="share-2"></i> Share
+        </button>
+        <button class="btn btn-success" onclick="downloadPDF()">
+          <i data-lucide="file-down"></i> Save PDF
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    lucide.createIcons();
+
+    const video = document.getElementById('video');
+    const cropCanvas = document.getElementById('cropCanvas');
+    const outputCanvas = document.getElementById('outputCanvas');
+    const rawCanvas = document.getElementById('rawCanvas');
+    const placeholder = document.getElementById('placeholder');
+    const filterBar = document.getElementById('filterBar');
+
+    const btnCamera = document.getElementById('btnCamera');
+    const btnUpload = document.getElementById('btnUpload');
+    const btnCapture = document.getElementById('btnCapture');
+    const inputActionGroup = document.getElementById('inputActionGroup');
+    const confirmActionGroup = document.getElementById('confirmActionGroup');
+    const exportActionGroup = document.getElementById('exportActionGroup');
+    const fileInput = document.getElementById('fileInput');
+
+    let stream = null;
+    let fullImageBitmap = null;
+    let corners = []; // [{x, y}, ...]
+    let activeCornerIndex = -1;
+    let croppedMatColor = null;
+
+    // 1. OpenCV Loaded
+    function onOpenCvReady() {
+      document.getElementById('cvStatusDot').classList.add('ready');
+      document.getElementById('cvStatusText').innerText = "Vision Engine Ready";
+      btnCamera.disabled = false;
+      btnUpload.disabled = false;
+    }
+
+    // 2. Camera Handling with Resolution Preference
+    async function initCamera() {
+      try {
+        const constraints = {
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 2560 }, // Maximum available high-res
+            height: { ideal: 1440 }
+          },
+          audio: false
+        };
+
+        try {
+          stream = await navigator.mediaDevices.getUserMedia(constraints);
+        } catch {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        }
+
+        video.srcObject = stream;
+        await video.play();
+
+        video.style.display = "block";
+        placeholder.style.display = "none";
+        cropCanvas.style.display = "none";
+        outputCanvas.style.display = "none";
+
+        inputActionGroup.style.display = "none";
+        btnCapture.style.display = "inline-flex";
+      } catch (err) {
+        alert("Camera error: " + err.message);
+      }
+    }
+
+    // 3. File Upload Handling
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          stopCamera();
+          setupImageForCrop(img);
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // 4. Capture Frame
+    function captureSnapshot() {
+      rawCanvas.width = video.videoWidth || 1920;
+      rawCanvas.height = video.videoHeight || 1080;
+      const ctx = rawCanvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, rawCanvas.width, rawCanvas.height);
+
+      stopCamera();
+      setupImageForCrop(rawCanvas);
+    }
+
+    function stopCamera() {
+      if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+        stream = null;
+      }
+      video.style.display = "none";
+      btnCapture.style.display = "none";
+    }
+
+    // 5. Automatic Edge Detection with Adjustable Crop UI
+    function setupImageForCrop(sourceElement) {
+      // High-res offscreen store
+      rawCanvas.width = sourceElement.naturalWidth || sourceElement.videoWidth || sourceElement.width;
+      rawCanvas.height = sourceElement.naturalHeight || sourceElement.videoHeight || sourceElement.height;
+      const rCtx = rawCanvas.getContext('2d');
+      rCtx.drawImage(sourceElement, 0, 0);
+
+      placeholder.style.display = "none";
+      cropCanvas.style.display = "block";
+
+      // Display size matches raw canvas
+      cropCanvas.width = rawCanvas.width;
+      cropCanvas.height = rawCanvas.height;
+
+      // Detect edges via OpenCV
+      detectDocumentCorners();
+
+      // Show interactive overlay
+      drawCropInterface();
+      attachPointDragger();
+
+      inputActionGroup.style.display = "none";
+      confirmActionGroup.style.display = "flex";
+    }
+
+    function detectDocumentCorners() {
+      const w = rawCanvas.width;
+      const h = rawCanvas.height;
+
+      try {
+        let src = cv.imread(rawCanvas);
+        let gray = new cv.Mat();
+        let blurred = new cv.Mat();
+        let edged = new cv.Mat();
+
+        cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
+        cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
+        cv.Canny(blurred, edged, 60, 180);
+
+        let contours = new cv.MatVector();
+        let hierarchy = new cv.Mat();
+        cv.findContours(edged, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
+
+        let maxArea = 0;
+        let bestPoly = null;
+
+        for (let i = 0; i < contours.size(); ++i) {
+          let cnt = contours.get(i);
+          let area = cv.contourArea(cnt);
+          if (area > (w * h * 0.08)) { // Minimum 8% of screen area
+            let peri = cv.arcLength(cnt, true);
+            let approx = new cv.Mat();
+            cv.approxPolyDP(cnt, approx, 0.02 * peri, true);
+
+            if (approx.rows === 4 && area > maxArea) {
+              maxArea = area;
+              if (bestPoly) bestPoly.delete();
+              bestPoly = approx.clone();
+            }
+            approx.delete();
+          }
+        }
+
+        if (bestPoly) {
+          let pts = [];
+          for (let i = 0; i < 4; i++) {
+            pts.push({ x: bestPoly.data32S[i * 2], y: bestPoly.data32S[i * 2 + 1] });
+          }
+          corners = sortFourPoints(pts);
+          bestPoly.delete();
+        } else {
+          // Default fallbacks with 10% margins
+          corners = [
+            { x: w * 0.1, y: h * 0.1 },
+            { x: w * 0.9, y: h * 0.1 },
+            { x: w * 0.9, y: h * 0.9 },
+            { x: w * 0.1, y: h * 0.9 }
+          ];
+        }
+
+        src.delete(); gray.delete(); blurred.delete(); edged.delete();
+        contours.delete(); hierarchy.delete();
+      } catch (e) {
+        console.error("OpenCV detection error:", e);
+        corners = [
+          { x: w * 0.1, y: h * 0.1 },
+          { x: w * 0.9, y: h * 0.1 },
+          { x: w * 0.9, y: h * 0.9 },
+          { x: w * 0.1, y: h * 0.9 }
+        ];
+      }
+    }
+
+    function sortFourPoints(pts) {
+      pts.sort((a, b) => a.y - b.y);
+      let top = [pts[0], pts[1]].sort((a, b) => a.x - b.x);
+      let bottom = [pts[2], pts[3]].sort((a, b) => a.x - b.x);
+      return [top[0], top[1], bottom[1], bottom[0]]; // TL, TR, BR, BL
+    }
+
+    // 6. Draw Crop Overlay (Lines + Magnified Draggable Points)
+    function drawCropInterface() {
+      const ctx = cropCanvas.getContext('2d');
+      ctx.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
+      ctx.drawImage(rawCanvas, 0, 0);
+
+      // Dark shroud outside crop
+      ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+      ctx.fillRect(0, 0, cropCanvas.width, cropCanvas.height);
+
+      // Clear polygon interior
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(corners[0].x, corners[0].y);
+      for (let i = 1; i < 4; i++) ctx.lineTo(corners[i].x, corners[i].y);
+      ctx.closePath();
+      ctx.clip();
+      ctx.drawImage(rawCanvas, 0, 0);
+      ctx.restore();
+
+      // Border Lines
+      ctx.strokeStyle = "#4f46e5";
+      ctx.lineWidth = Math.max(cropCanvas.width * 0.005, 4);
+      ctx.beginPath();
+      ctx.moveTo(corners[0].x, corners[0].y);
+      for (let i = 1; i < 4; i++) ctx.lineTo(corners[i].x, corners[i].y);
+      ctx.closePath();
+      ctx.stroke();
+
+      // Handles / Corner circles
+      const radius = Math.max(cropCanvas.width * 0.02, 16);
+      corners.forEach((pt, i) => {
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.lineWidth = radius * 0.3;
+        ctx.strokeStyle = "#4f46e5";
+        ctx.stroke();
+      });
+    }
+
+    // 7. Interactive Corner Dragging (Touch + Mouse Support)
+    function attachPointDragger() {
+      let isDragging = false;
+
+      function getCoords(e) {
+        const rect = cropCanvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        const scaleX = cropCanvas.width / rect.width;
+        const scaleY = cropCanvas.height / rect.height;
+        return {
+          x: (clientX - rect.left) * scaleX,
+          y: (clientY - rect.top) * scaleY
+        };
+      }
+
+      function onStart(e) {
+        const { x, y } = getCoords(e);
+        const threshold = Math.max(cropCanvas.width * 0.09, 60);
+
+        activeCornerIndex = -1;
+        corners.forEach((pt, i) => {
+          let dist = Math.hypot(pt.x - x, pt.y - y);
+          if (dist < threshold) activeCornerIndex = i;
+        });
+
+        if (activeCornerIndex !== -1) {
+          isDragging = true;
+          e.preventDefault();
+        }
+      }
+
+      function onMove(e) {
+        if (!isDragging || activeCornerIndex === -1) return;
+        const { x, y } = getCoords(e);
+        corners[activeCornerIndex] = {
+          x: Math.max(0, Math.min(cropCanvas.width, x)),
+          y: Math.max(0, Math.min(cropCanvas.height, y))
+        };
+        drawCropInterface();
+        e.preventDefault();
+      }
+
+      function onEnd() {
+        isDragging = false;
+        activeCornerIndex = -1;
+      }
+
+      cropCanvas.onmousedown = onStart;
+      window.onmousemove = onMove;
+      window.onmouseup = onEnd;
+
+      cropCanvas.ontouchstart = onStart;
+      window.ontouchmove = onMove;
+      window.ontouchend = onEnd;
+    }
+
+    // 8. Confirm Crop -> Perspective Transform
+    function applyPerspectiveCrop() {
+      let src = cv.imread(rawCanvas);
+
+      let [tl, tr, br, bl] = corners;
+      let widthTop = Math.hypot(tr.x - tl.x, tr.y - tl.y);
+      let widthBottom = Math.hypot(br.x - bl.x, br.y - bl.y);
+      let maxWidth = Math.max(widthTop, widthBottom);
+
+      let heightLeft = Math.hypot(tl.x - bl.x, tl.y - bl.y);
+      let heightRight = Math.hypot(tr.x - br.x, tr.y - br.y);
+      let maxHeight = Math.max(heightLeft, heightRight);
+
+      let srcCoords = cv.matFromArray(4, 1, cv.CV_32FC2, [tl.x, tl.y, tr.x, tr.y, br.x, br.y, bl.x, bl.y]);
+      let dstCoords = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, maxWidth, 0, maxWidth, maxHeight, 0, maxHeight]);
+
+      let M = cv.getPerspectiveTransform(srcCoords, dstCoords);
+      let dst = new cv.Mat();
+      cv.warpPerspective(src, dst, M, new cv.Size(maxWidth, maxHeight), cv.INTER_LANCZOS4, cv.BORDER_CONSTANT, new cv.Scalar());
+
+      if (croppedMatColor) croppedMatColor.delete();
+      croppedMatColor = dst.clone();
+
+      cv.imshow(outputCanvas, dst);
+
+      // Cleanup
+      src.delete(); srcCoords.delete(); dstCoords.delete(); M.delete(); dst.delete();
+
+      cropCanvas.style.display = "none";
+      outputCanvas.style.display = "block";
+      confirmActionGroup.style.display = "none";
+      filterBar.style.display = "flex";
+      exportActionGroup.style.display = "flex";
+
+      // Select default clean filter
+      applyFilter('color');
+    }
+
+    // 9. Document Enhancements / Filters
+    function applyFilter(mode) {
+      if (!croppedMatColor) return;
+
+      document.getElementById('chipColor').classList.toggle('active', mode === 'color');
+      document.getElementById('chipMagic').classList.toggle('active', mode === 'magic');
+      document.getElementById('chipBw').classList.toggle('active', mode === 'bw');
+
+      if (mode === 'color') {
+        cv.imshow(outputCanvas, croppedMatColor);
+      } else if (mode === 'magic') {
+        // Boost contrast & brighten paper background
+        let result = new cv.Mat();
+        croppedMatColor.convertTo(result, -1, 1.25, 20); // alpha = 1.25, beta = 20
+        cv.imshow(outputCanvas, result);
+        result.delete();
+      } else if (mode === 'bw') {
+        let gray = new cv.Mat();
+        let bw = new cv.Mat();
+        cv.cvtColor(croppedMatColor, gray, cv.COLOR_RGBA2GRAY, 0);
+        // Crisp high-contrast binarization
+        cv.adaptiveThreshold(gray, bw, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 21, 12);
+        cv.imshow(outputCanvas, bw);
+        gray.delete(); bw.delete();
+      }
+    }
+
+    // 10. Generate High-Res PDF (A4 Ratio Preserved)
+    function buildPdfBlob() {
+      const { jsPDF } = window.jspdf;
+      // High-resolution image generation
+      const imgData = outputCanvas.toDataURL('image/jpeg', 0.98);
+
+      const isLandscape = outputCanvas.width > outputCanvas.height;
+      const doc = new jsPDF({
+        orientation: isLandscape ? 'landscape' : 'portrait',
+        unit: 'mm',
+        format: 'a4',
+        compress: true
+      });
+
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 8; // 8mm sleek margin
+
+      const printableW = pageWidth - (margin * 2);
+      const printableH = pageHeight - (margin * 2);
+
+      let renderW = printableW;
+      let renderH = (outputCanvas.height * renderW) / outputCanvas.width;
+
+      if (renderH > printableH) {
+        renderH = printableH;
+        renderW = (outputCanvas.width * renderH) / outputCanvas.height;
+      }
+
+      // Center image on A4 sheet
+      const posX = margin + (printableW - renderW) / 2;
+      const posY = margin + (printableH - renderH) / 2;
+
+      doc.addImage(imgData, 'JPEG', posX, posY, renderW, renderH, undefined, 'FAST');
+      return doc;
+    }
+
+    function downloadPDF() {
+      const doc = buildPdfBlob();
+      doc.save(`Scan_${Date.now()}.pdf`);
+    }
+
+    // 11. Native Web Share (WhatsApp / Drive / Mail)
+    async function sharePDF() {
+      try {
+        const doc = buildPdfBlob();
+        const blob = doc.output('blob');
+        const file = new File([blob], `Scan_${Date.now()}.pdf`, { type: 'application/pdf' });
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: 'Scanned Document',
+            text: 'Here is your scanned PDF document.'
+          });
+        } else {
+          // If native file share is unsupported on device
+          downloadPDF();
+        }
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          downloadPDF();
+        }
+      }
+    }
+
+    // 12. Reset
+    function resetAll() {
+      if (croppedMatColor) {
+        croppedMatColor.delete();
+        croppedMatColor = null;
+      }
+      cropCanvas.style.display = "none";
+      outputCanvas.style.display = "none";
+      filterBar.style.display = "none";
+      confirmActionGroup.style.display = "none";
+      exportActionGroup.style.display = "none";
+      placeholder.style.display = "flex";
+      inputActionGroup.style.display = "flex";
+      fileInput.value = "";
+    }
+  </script>
+</body>
+</html>
