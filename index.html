@@ -4,48 +4,76 @@
 <title>DocScan</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
-:root{--bg:#0f1115;--card:#181b22;--tx:#eef1f6;--mut:#8b93a3;--ac:#22c55e}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--tx);font:16px system-ui,sans-serif;min-height:100vh}
-header{padding:16px;font-weight:800;font-size:20px;max-width:640px;margin:auto}
-header span{color:var(--ac)}
-main{max-width:640px;margin:auto;padding:0 16px 40px}
-.card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:12px}
-button,.btn{background:var(--ac);color:#04210f;border:0;border-radius:12px;padding:14px;font-weight:700;font-size:15px;cursor:pointer;text-align:center;display:block}
-.sec{background:#262b36;color:var(--tx)}
-.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.row>*{flex:1;min-width:120px}
-canvas{width:100%;display:block;border-radius:10px;background:#000;touch-action:none}
-.seg button{background:#262b36;color:var(--tx)}.seg button.on{background:var(--ac);color:#04210f}
-p{color:var(--mut);margin:0 0 12px;font-size:14px}
-select{width:100%;padding:12px;border-radius:12px;background:#262b36;color:var(--tx);border:0;margin-top:10px}
-.hide{display:none!important}
-input[type=file]{display:none}
+:root{--bg:#0a0c10;--card:#14181f;--card2:#1c222c;--tx:#eef2f7;--mut:#8a94a6;--ac:#22c55e;--ac2:#16a34a}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:radial-gradient(900px 400px at 50% -100px,#0f2a1a,var(--bg));color:var(--tx);font:16px system-ui,-apple-system,sans-serif;min-height:100vh}
+header{max-width:640px;margin:auto;padding:18px 16px 10px;font-weight:800;font-size:22px;letter-spacing:-.5px}
+header span{color:var(--ac)}header small{display:block;font-weight:500;font-size:13px;color:var(--mut);letter-spacing:0}
+main{max-width:640px;margin:auto;padding:0 16px 48px}
+.card{background:var(--card);border:1px solid #232a36;border-radius:20px;padding:16px;margin-bottom:12px}
+button,.btn{background:linear-gradient(135deg,var(--ac),var(--ac2));color:#03200e;border:0;border-radius:14px;padding:14px;font-weight:700;font-size:15px;cursor:pointer;text-align:center;display:block;font-family:inherit}
+.sec{background:var(--card2);color:var(--tx);border:1px solid #2a3240}
+.danger{background:transparent;color:#f87171;border:1px solid #3b2327}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.row>*{flex:1;min-width:130px}
+canvas{width:100%;display:block;border-radius:12px;background:#000;touch-action:none}
+.seg{display:flex;background:var(--card2);padding:4px;border-radius:14px;margin-top:12px;gap:4px}
+.seg button{flex:1;background:transparent;color:var(--mut)}.seg button.on{background:var(--ac);color:#03200e}
+p{color:var(--mut);margin:0 0 10px;font-size:14px;line-height:1.45}
+.hero{text-align:center;padding:28px 16px}.hero .ic{font-size:44px}.hero h2{margin:8px 0 4px}
+select{width:100%;padding:13px;border-radius:14px;background:var(--card2);color:var(--tx);border:1px solid #2a3240;margin-top:10px;font-size:15px}
+.hide{display:none!important}input[type=file]{display:none}
+#strip{display:flex;gap:10px;overflow-x:auto;padding:4px 2px 12px;margin-bottom:4px}
+.th{position:relative;flex:0 0 auto;width:74px;border:2px solid #232a36;border-radius:12px;overflow:hidden;cursor:pointer;background:#000}
+.th.on{border-color:var(--ac)}.th canvas{border-radius:0}
+.th i{position:absolute;left:4px;top:4px;background:rgba(0,0,0,.7);color:#fff;font-style:normal;font-size:11px;padding:1px 6px;border-radius:8px}
+.add{flex:0 0 auto;width:74px;min-height:96px;border:2px dashed #2f3a4b;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--ac);cursor:pointer}
+.name{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+.name input{flex:1;min-width:0;background:transparent;border:0;border-bottom:2px solid transparent;color:var(--tx);font-size:19px;font-weight:700;padding:6px 2px;font-family:inherit}
+.name input:not([readonly]){border-color:var(--ac);outline:0}
+.name button{flex:0 0 44px;padding:10px;min-width:0}
+.q{margin-top:14px;background:var(--card2);border-radius:14px;padding:14px}
+.q b{display:flex;justify-content:space-between;font-size:14px}.q b em{font-style:normal;color:var(--ac)}
+input[type=range]{width:100%;accent-color:var(--ac);margin:12px 0 4px}
+.lab{display:flex;justify-content:space-between;font-size:11px;color:var(--mut)}
+#msg{margin:12px 0 0;text-align:center}
 </style></head><body>
-<header>Doc<span>Scan</span></header>
+<header>Doc<span>Scan</span><small>Scan • Crop • Enhance • PDF</small></header>
 <main>
 
-<div id="s1" class="card">
-  <p>Document ko flat surface par rakho, achhi light me photo lo ya gallery se choose karo.</p>
+<div id="home" class="card hero">
+  <div class="ic">📄</div><h2>Naya scan shuru karo</h2>
+  <p>Document ko flat surface par rakho. Gallery se ek saath kai photos bhi le sakte ho.</p>
   <div class="row">
-    <label class="btn">📷 Camera<input type="file" accept="image/*" capture="environment" id="f1"></label>
-    <label class="btn sec">🖼 Gallery<input type="file" accept="image/*" id="f2"></label>
+    <label class="btn">📷 Camera<input type="file" accept="image/*" capture="environment" id="fCam"></label>
+    <label class="btn sec">🖼 Gallery<input type="file" accept="image/*" multiple id="fGal"></label>
   </div>
-  <p id="cnt" style="margin-top:12px"></p>
 </div>
 
-<div id="s2" class="card hide">
-  <p>Edges auto detect ho gaye. Green corners ko drag karke adjust karo, phir confirm karo.</p>
+<div id="strip" class="hide"></div>
+<input type="file" accept="image/*" multiple id="fAdd">
+
+<div id="crop" class="card hide">
+  <p id="cinfo"></p>
   <canvas id="cv"></canvas>
   <div class="row">
-    <button class="sec" id="redo">Auto-detect again</button>
-    <button id="ok">Confirm crop ✓</button>
+    <button class="sec" id="redo">✨ Auto-detect</button>
+    <label class="btn sec" for="fAdd">＋ Add page</label>
   </div>
-  <div class="row"><button class="sec" id="back1">Retake</button></div>
+  <div class="row">
+    <button class="danger" id="del1">🗑 Delete page</button>
+    <button id="ok">Confirm &amp; continue ✓</button>
+  </div>
 </div>
 
-<div id="s3" class="card hide">
+<div id="res" class="card hide">
+  <div class="name"><input id="title" readonly maxlength="60"><button class="sec" id="pen" title="Rename">✏️</button></div>
   <canvas id="out"></canvas>
-  <div class="row seg"><button id="mc" class="on">Color</button><button id="mb">B&amp;W</button></div>
+  <div class="seg"><button id="mc" class="on">Color</button><button id="mb">B&amp;W</button></div>
+  <div class="q">
+    <b><span id="qn">High</span><em id="est"></em></b>
+    <input type="range" id="qr" min="0" max="4" step="1" value="3">
+    <div class="lab"><span>Smallest</span><span>Balanced</span><span>Best</span></div>
+  </div>
   <select id="size">
     <option value="a4">PDF size: A4 (auto fit)</option>
     <option value="orig">PDF size: Original ratio</option>
@@ -55,32 +83,23 @@ input[type=file]{display:none}
     <button id="sh" class="sec">↗ Share</button>
   </div>
   <div class="row">
-    <button id="add" class="sec">+ Add page</button>
-    <button id="new" class="sec">New scan</button>
+    <button class="sec" id="recrop">✂ Re-crop page</button>
+    <label class="btn sec" for="fAdd">＋ Add page</label>
   </div>
-  <p id="msg" style="margin-top:12px"></p>
+  <div class="row">
+    <button class="danger" id="del2">🗑 Delete page</button>
+    <button class="danger" id="new">New scan</button>
+  </div>
+  <p id="msg"></p>
 </div>
 </main>
 
 <script>
 const $=id=>document.getElementById(id);
-const MAXPX=3300;
-let src,quad,scale=1,pages=[],warped,cur,mode='color',drag=-1;
-
-function show(id){['s1','s2','s3'].forEach(s=>$(s).classList.toggle('hide',s!==id));
-  $('cnt').textContent=pages.length?pages.length+' page(s) added':'';}
-
-async function load(file){
-  if(!file)return;
-  const url=URL.createObjectURL(file),img=new Image();img.src=url;await img.decode();
-  const k=Math.min(1,MAXPX/Math.max(img.naturalWidth,img.naturalHeight));
-  src=document.createElement('canvas');
-  src.width=Math.round(img.naturalWidth*k);src.height=Math.round(img.naturalHeight*k);
-  src.getContext('2d').drawImage(img,0,0,src.width,src.height);
-  URL.revokeObjectURL(url);
-  quad=detect(src);show('s2');draw();
-}
-$('f1').onchange=$('f2').onchange=e=>{load(e.target.files[0]);e.target.value=''};
+const MAXPX=3000,tick=()=>new Promise(r=>setTimeout(r,20));
+const STEPS=[[.5,.8,'Compact'],[.65,.85,'Small'],[.8,.9,'Balanced'],[1,.93,'High'],[1,.98,'Max quality']];
+let pages=[],sel=0,view='home',mode='color',step=3,uid=0,cache=new Map(),drag=-1,scale=1,estTok=0;
+$('title').value='Scan '+new Date().toLocaleDateString('en-GB').replace(/\//g,'-');
 
 /* ---------- Edge detection (paper vs background, Otsu + largest blob) ---------- */
 function detect(c){
@@ -118,34 +137,9 @@ function detect(c){
   return [tl,tr,br,bl].map(o=>[(o[0]%w)/k,((o[0]/w)|0)/k]);
 }
 
-/* ---------- Crop UI ---------- */
-const cv=$('cv');
-const ratio=()=>cv.width/cv.getBoundingClientRect().width;
-function draw(){
-  scale=Math.min(1,1000/Math.max(src.width,src.height));
-  cv.width=Math.round(src.width*scale);cv.height=Math.round(src.height*scale);
-  const x=cv.getContext('2d'),r=ratio(),P=quad.map(q=>[q[0]*scale,q[1]*scale]);
-  x.drawImage(src,0,0,cv.width,cv.height);
-  x.beginPath();x.rect(0,0,cv.width,cv.height);
-  P.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));x.closePath();
-  x.fillStyle='rgba(0,0,0,.5)';x.fill('evenodd');
-  x.beginPath();P.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));x.closePath();
-  x.strokeStyle='#22c55e';x.lineWidth=3*r;x.stroke();
-  P.forEach(p=>{x.beginPath();x.arc(p[0],p[1],13*r,0,7);x.fillStyle='#22c55e';x.fill();
-    x.lineWidth=2*r;x.strokeStyle='#fff';x.stroke()});
-}
-const pt=e=>{const b=cv.getBoundingClientRect(),r=ratio();return[(e.clientX-b.left)*r,(e.clientY-b.top)*r]};
-cv.onpointerdown=e=>{const p=pt(e);let bd=1e9;drag=-1;
-  quad.forEach((q,i)=>{const d=Math.hypot(q[0]*scale-p[0],q[1]*scale-p[1]);if(d<bd){bd=d;drag=i}});
-  if(bd>70*ratio())drag=-1;else cv.setPointerCapture(e.pointerId)};
-cv.onpointermove=e=>{if(drag<0)return;const p=pt(e);
-  quad[drag]=[Math.min(src.width,Math.max(0,p[0]/scale)),Math.min(src.height,Math.max(0,p[1]/scale))];draw()};
-cv.onpointerup=()=>drag=-1;
-$('redo').onclick=()=>{quad=detect(src);draw()};
-$('back1').onclick=()=>show('s1');
-
 /* ---------- Perspective warp (full resolution, bilinear) ---------- */
-function warp(){
+function warp(P){
+  const src=P.src,quad=P.quad;
   const[p0,p1,p2,p3]=quad,dist=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
   let W=(dist(p0,p1)+dist(p3,p2))/2,H=(dist(p0,p3)+dist(p1,p2))/2;
   const k=Math.min(1,MAXPX/Math.max(W,H));W=Math.max(2,Math.round(W*k));H=Math.max(2,Math.round(H*k));
@@ -182,277 +176,136 @@ function filt(c,bw){
   const o=document.createElement('canvas');o.width=w;o.height=h;o.getContext('2d').putImageData(id,0,0);return o;
 }
 
-/* ---------- Result ---------- */
-function render(){
-  cur=filt(warped,mode==='bw');
-  const c=$('out');c.width=cur.width;c.height=cur.height;c.getContext('2d').drawImage(cur,0,0);
-  $('mc').classList.toggle('on',mode==='color');$('mb').classList.toggle('on',mode==='bw');
-  $('msg').textContent=(pages.length+1)+' page(s) in PDF';
-}
-$('ok').onclick=()=>{
-  $('ok').textContent='Processing…';
-  setTimeout(()=>{warped=warp();mode='color';show('s3');render();$('ok').textContent='Confirm crop ✓'},30);
-};
-$('mc').onclick=()=>{mode='color';render()};
-$('mb').onclick=()=>{mode='bw';render()};
-$('add').onclick=()=>{pages.push(cur);show('s1')};
-$('new').onclick=()=>{pages=[];show('s1')};
 
-function makePDF(){
-  const{jsPDF}=window.jspdf,all=pages.concat(cur),fmt=$('size').value;let doc;
-  all.forEach((c,i)=>{
-    const r=c.width/c.height;let pw,ph,iw,ih,ox=0,oy=0;
-    if(fmt==='a4'){[pw,ph]=r<1?[210,297]:[297,210];
-      const ar=Math.min(r,1/r);
-      if(Math.abs(ar-210/297)/(210/297)<.08){iw=pw;ih=ph}
-      else{const s=Math.min(pw/c.width,ph/c.height);iw=c.width*s;ih=c.height*s;ox=(pw-iw)/2;oy=(ph-ih)/2}}
-    else{pw=r<1?210:297;ph=pw/r;iw=pw;ih=ph}
-    const o=pw>ph?'l':'p';
-    if(!i)doc=new jsPDF({unit:'mm',format:[pw,ph],orientation:o,compress:false});else doc.addPage([pw,ph],o);
-    doc.addImage(c.toDataURL('image/jpeg',.95),'JPEG',ox,oy,iw,ih,undefined,'NONE');
-  });
-  return doc.output('blob');
-}
-const name=()=>'scan-'+new Date().toISOString().slice(0,10)+'.pdf';
-$('dl').onclick=()=>{
-  $('msg').textContent='PDF ban rahi hai…';
-  setTimeout(()=>{const u=URL.createObjectURL(makePDF()),a=document.createElement('a');
-    a.href=u;a.download=name();document.body.appendChild(a);a.click();a.remove();
-    setTimeout(()=>URL.revokeObjectURL(u),5000);$('msg').textContent='Downloaded ✓'},30);
-};
-$('sh').onclick=async()=>{
-  const f=new File([makePDF()],name(),{type:'application/pdf'});
-  if(navigator.canShare&&navigator.canShare({files:[f]})){
-    try{await navigator.share({files:[f],title:'Scanned document'})}catch(e){}
-  }else $('msg').textContent='Is browser me share support nahi hai, Download use karo.';
-};
-</script></body></html>
-<!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>DocScan</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<style>
-:root{--bg:#0f1115;--card:#181b22;--tx:#eef1f6;--mut:#8b93a3;--ac:#22c55e}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--tx);font:16px system-ui,sans-serif;min-height:100vh}
-header{padding:16px;font-weight:800;font-size:20px;max-width:640px;margin:auto}
-header span{color:var(--ac)}
-main{max-width:640px;margin:auto;padding:0 16px 40px}
-.card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:12px}
-button,.btn{background:var(--ac);color:#04210f;border:0;border-radius:12px;padding:14px;font-weight:700;font-size:15px;cursor:pointer;text-align:center;display:block}
-.sec{background:#262b36;color:var(--tx)}
-.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.row>*{flex:1;min-width:120px}
-canvas{width:100%;display:block;border-radius:10px;background:#000;touch-action:none}
-.seg button{background:#262b36;color:var(--tx)}.seg button.on{background:var(--ac);color:#04210f}
-p{color:var(--mut);margin:0 0 12px;font-size:14px}
-select{width:100%;padding:12px;border-radius:12px;background:#262b36;color:var(--tx);border:0;margin-top:10px}
-.hide{display:none!important}
-input[type=file]{display:none}
-</style></head><body>
-<header>Doc<span>Scan</span></header>
-<main>
 
-<div id="s1" class="card">
-  <p>Document ko flat surface par rakho, achhi light me photo lo ya gallery se choose karo.</p>
-  <div class="row">
-    <label class="btn">📷 Camera<input type="file" accept="image/*" capture="environment" id="f1"></label>
-    <label class="btn sec">🖼 Gallery<input type="file" accept="image/*" id="f2"></label>
-  </div>
-  <p id="cnt" style="margin-top:12px"></p>
-</div>
-
-<div id="s2" class="card hide">
-  <p>Edges auto detect ho gaye. Green corners ko drag karke adjust karo, phir confirm karo.</p>
-  <canvas id="cv"></canvas>
-  <div class="row">
-    <button class="sec" id="redo">Auto-detect again</button>
-    <button id="ok">Confirm crop ✓</button>
-  </div>
-  <div class="row"><button class="sec" id="back1">Retake</button></div>
-</div>
-
-<div id="s3" class="card hide">
-  <canvas id="out"></canvas>
-  <div class="row seg"><button id="mc" class="on">Color</button><button id="mb">B&amp;W</button></div>
-  <select id="size">
-    <option value="a4">PDF size: A4 (auto fit)</option>
-    <option value="orig">PDF size: Original ratio</option>
-  </select>
-  <div class="row">
-    <button id="dl">⬇ Download PDF</button>
-    <button id="sh" class="sec">↗ Share</button>
-  </div>
-  <div class="row">
-    <button id="add" class="sec">+ Add page</button>
-    <button id="new" class="sec">New scan</button>
-  </div>
-  <p id="msg" style="margin-top:12px"></p>
-</div>
-</main>
-
-<script>
-const $=id=>document.getElementById(id);
-const MAXPX=3300;
-let src,quad,scale=1,pages=[],warped,cur,mode='color',drag=-1;
-
-function show(id){['s1','s2','s3'].forEach(s=>$(s).classList.toggle('hide',s!==id));
-  $('cnt').textContent=pages.length?pages.length+' page(s) added':'';}
-
-async function load(file){
-  if(!file)return;
-  const url=URL.createObjectURL(file),img=new Image();img.src=url;await img.decode();
-  const k=Math.min(1,MAXPX/Math.max(img.naturalWidth,img.naturalHeight));
-  src=document.createElement('canvas');
-  src.width=Math.round(img.naturalWidth*k);src.height=Math.round(img.naturalHeight*k);
-  src.getContext('2d').drawImage(img,0,0,src.width,src.height);
-  URL.revokeObjectURL(url);
-  quad=detect(src);show('s2');draw();
-}
-$('f1').onchange=$('f2').onchange=e=>{load(e.target.files[0]);e.target.value=''};
-
-/* ---------- Edge detection (paper vs background, Otsu + largest blob) ---------- */
-function detect(c){
-  const k=200/Math.max(c.width,c.height),w=Math.round(c.width*k),h=Math.round(c.height*k);
-  const t=document.createElement('canvas');t.width=w;t.height=h;
-  const x=t.getContext('2d');x.drawImage(c,0,0,w,h);
-  const d=x.getImageData(0,0,w,h).data,n=w*h,g=new Uint8Array(n),hist=new Array(256).fill(0);
-  for(let i=0;i<n;i++){g[i]=.299*d[i*4]+.587*d[i*4+1]+.114*d[i*4+2];hist[g[i]]++}
-  let sum=0;for(let i=0;i<256;i++)sum+=i*hist[i];
-  let wb=0,sb=0,best=0,th=128;
-  for(let i=0;i<256;i++){wb+=hist[i];if(!wb)continue;const wf=n-wb;if(!wf)break;
-    sb+=i*hist[i];const v=wb*wf*Math.pow(sb/wb-(sum-sb)/wf,2);if(v>best){best=v;th=i}}
-  let m=new Uint8Array(n);for(let i=0;i<n;i++)m[i]=g[i]>th?1:0;
-  let bd=0,bt=0;
-  for(let i=0;i<w;i++){bd+=m[i]+m[(h-1)*w+i];bt+=2}
-  for(let j=0;j<h;j++){bd+=m[j*w]+m[j*w+w-1];bt+=2}
-  if(bd/bt>.5)for(let i=0;i<n;i++)m[i]^=1;
-  const lab=new Int32Array(n),st=new Int32Array(n);let id=0,bid=0,bc=0;
-  for(let s=0;s<n;s++){
-    if(!m[s]||lab[s])continue;
-    id++;let sp=0,cnt=0;st[sp++]=s;lab[s]=id;
-    while(sp){const p=st[--sp];cnt++;const px=p%w,py=(p/w)|0;
-      if(px>0&&m[p-1]&&!lab[p-1]){lab[p-1]=id;st[sp++]=p-1}
-      if(px<w-1&&m[p+1]&&!lab[p+1]){lab[p+1]=id;st[sp++]=p+1}
-      if(py>0&&m[p-w]&&!lab[p-w]){lab[p-w]=id;st[sp++]=p-w}
-      if(py<h-1&&m[p+w]&&!lab[p+w]){lab[p+w]=id;st[sp++]=p+w}}
-    if(cnt>bc){bc=cnt;bid=id}
+/* ---------- Page loading ---------- */
+async function addFiles(files){
+  files=[...files];if(!files.length)return;
+  const first=pages.length;
+  for(const file of files){
+    const url=URL.createObjectURL(file),img=new Image();img.src=url;
+    try{await img.decode()}catch(e){continue}
+    const k=Math.min(1,MAXPX/Math.max(img.naturalWidth,img.naturalHeight)),c=document.createElement('canvas');
+    c.width=Math.round(img.naturalWidth*k);c.height=Math.round(img.naturalHeight*k);
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);
+    pages.push({id:++uid,src:c,quad:detect(c),dirty:true,ver:0,f:{}});
+    await tick();
   }
-  const W=c.width,H=c.height,ins=.06;
-  const fb=[[W*ins,H*ins],[W*(1-ins),H*ins],[W*(1-ins),H*(1-ins)],[W*ins,H*(1-ins)]];
-  if(!bid||bc/n<.15||bc/n>.97)return fb;
-  let tl=[0,1e9],br=[0,-1e9],tr=[0,-1e9],bl=[0,1e9];
-  for(let p=0;p<n;p++){if(lab[p]!==bid)continue;const px=p%w,py=(p/w)|0,a=px+py,b=px-py;
-    if(a<tl[1])tl=[p,a];if(a>br[1])br=[p,a];if(b>tr[1])tr=[p,b];if(b<bl[1])bl=[p,b]}
-  return [tl,tr,br,bl].map(o=>[(o[0]%w)/k,((o[0]/w)|0)/k]);
+  if(pages.length>first){sel=first;show('crop')}
+}
+['fCam','fGal','fAdd'].forEach(i=>$(i).onchange=e=>{addFiles(e.target.files);e.target.value=''});
+
+function show(v){
+  view=v;
+  $('home').classList.toggle('hide',v!=='home');$('crop').classList.toggle('hide',v!=='crop');
+  $('res').classList.toggle('hide',v!=='res');$('strip').classList.toggle('hide',v==='home');
+  refresh();
+}
+function refresh(){strip();if(view==='crop')draw();if(view==='res')renderRes()}
+
+function strip(){
+  const s=$('strip');s.innerHTML='';
+  pages.forEach((P,i)=>{
+    const d=document.createElement('div');d.className='th'+(i===sel?' on':'');
+    const c=document.createElement('canvas'),b=(view==='res'&&P.warped)||P.src;
+    c.width=90;c.height=Math.round(90*b.height/b.width);c.getContext('2d').drawImage(b,0,0,c.width,c.height);
+    d.append(c);const n=document.createElement('i');n.textContent=i+1;d.append(n);
+    d.onclick=()=>{sel=i;refresh()};s.append(d);
+  });
+  const a=document.createElement('label');a.className='add';a.htmlFor='fAdd';a.textContent='+';s.append(a);
 }
 
 /* ---------- Crop UI ---------- */
-const cv=$('cv');
-const ratio=()=>cv.width/cv.getBoundingClientRect().width;
+const cv=$('cv'),ratio=()=>cv.width/(cv.getBoundingClientRect().width||cv.width);
 function draw(){
-  scale=Math.min(1,1000/Math.max(src.width,src.height));
-  cv.width=Math.round(src.width*scale);cv.height=Math.round(src.height*scale);
-  const x=cv.getContext('2d'),r=ratio(),P=quad.map(q=>[q[0]*scale,q[1]*scale]);
-  x.drawImage(src,0,0,cv.width,cv.height);
-  x.beginPath();x.rect(0,0,cv.width,cv.height);
-  P.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));x.closePath();
+  const P=pages[sel];if(!P)return;
+  scale=Math.min(1,1000/Math.max(P.src.width,P.src.height));
+  cv.width=Math.round(P.src.width*scale);cv.height=Math.round(P.src.height*scale);
+  const x=cv.getContext('2d'),r=ratio(),Q=P.quad.map(q=>[q[0]*scale,q[1]*scale]);
+  $('cinfo').textContent='Page '+(sel+1)+' / '+pages.length+' — green corners drag karke edges adjust karo.';
+  x.drawImage(P.src,0,0,cv.width,cv.height);
+  const path=()=>{x.beginPath();Q.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));x.closePath()};
+  x.beginPath();x.rect(0,0,cv.width,cv.height);Q.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));x.closePath();
   x.fillStyle='rgba(0,0,0,.5)';x.fill('evenodd');
-  x.beginPath();P.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));x.closePath();
-  x.strokeStyle='#22c55e';x.lineWidth=3*r;x.stroke();
-  P.forEach(p=>{x.beginPath();x.arc(p[0],p[1],13*r,0,7);x.fillStyle='#22c55e';x.fill();
-    x.lineWidth=2*r;x.strokeStyle='#fff';x.stroke()});
+  path();x.strokeStyle='#22c55e';x.lineWidth=3*r;x.stroke();
+  Q.forEach(p=>{x.beginPath();x.arc(p[0],p[1],13*r,0,7);x.fillStyle='#22c55e';x.fill();x.lineWidth=2*r;x.strokeStyle='#fff';x.stroke()});
 }
 const pt=e=>{const b=cv.getBoundingClientRect(),r=ratio();return[(e.clientX-b.left)*r,(e.clientY-b.top)*r]};
-cv.onpointerdown=e=>{const p=pt(e);let bd=1e9;drag=-1;
-  quad.forEach((q,i)=>{const d=Math.hypot(q[0]*scale-p[0],q[1]*scale-p[1]);if(d<bd){bd=d;drag=i}});
+cv.onpointerdown=e=>{const P=pages[sel],p=pt(e);let bd=1e9;drag=-1;
+  P.quad.forEach((q,i)=>{const d=Math.hypot(q[0]*scale-p[0],q[1]*scale-p[1]);if(d<bd){bd=d;drag=i}});
   if(bd>70*ratio())drag=-1;else cv.setPointerCapture(e.pointerId)};
-cv.onpointermove=e=>{if(drag<0)return;const p=pt(e);
-  quad[drag]=[Math.min(src.width,Math.max(0,p[0]/scale)),Math.min(src.height,Math.max(0,p[1]/scale))];draw()};
+cv.onpointermove=e=>{if(drag<0)return;const P=pages[sel],p=pt(e);
+  P.quad[drag]=[Math.min(P.src.width,Math.max(0,p[0]/scale)),Math.min(P.src.height,Math.max(0,p[1]/scale))];P.dirty=true;draw()};
 cv.onpointerup=()=>drag=-1;
-$('redo').onclick=()=>{quad=detect(src);draw()};
-$('back1').onclick=()=>show('s1');
+$('redo').onclick=()=>{const P=pages[sel];P.quad=detect(P.src);P.dirty=true;draw()};
 
-/* ---------- Perspective warp (full resolution, bilinear) ---------- */
-function warp(){
-  const[p0,p1,p2,p3]=quad,dist=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
-  let W=(dist(p0,p1)+dist(p3,p2))/2,H=(dist(p0,p3)+dist(p1,p2))/2;
-  const k=Math.min(1,MAXPX/Math.max(W,H));W=Math.max(2,Math.round(W*k));H=Math.max(2,Math.round(H*k));
-  const[x0,y0]=p0,[x1,y1]=p1,[x2,y2]=p2,[x3,y3]=p3;
-  const dx1=x1-x2,dx2=x3-x2,dx3=x0-x1+x2-x3,dy1=y1-y2,dy2=y3-y2,dy3=y0-y1+y2-y3;
-  const den=dx1*dy2-dx2*dy1||1e-9,g=(dx3*dy2-dx2*dy3)/den,h=(dx1*dy3-dx3*dy1)/den;
-  const a=x1-x0+g*x1,b=x3-x0+h*x3,d=y1-y0+g*y1,e=y3-y0+h*y3;
-  const sw=src.width,sh=src.height,S=src.getContext('2d').getImageData(0,0,sw,sh).data;
-  const o=document.createElement('canvas');o.width=W;o.height=H;
-  const ox=o.getContext('2d'),od=ox.createImageData(W,H),O=od.data;
-  for(let y=0;y<H;y++){const v=y/(H-1);
-    for(let x=0;x<W;x++){const u=x/(W-1),q=g*u+h*v+1;
-      let sx=(a*u+b*v+x0)/q,sy=(d*u+e*v+y0)/q;
-      sx=Math.min(sw-1.001,Math.max(0,sx));sy=Math.min(sh-1.001,Math.max(0,sy));
-      const ix=sx|0,iy=sy|0,fx=sx-ix,fy=sy-iy,i=(iy*sw+ix)*4,j=i+sw*4,oi=(y*W+x)*4;
-      for(let c=0;c<3;c++)O[oi+c]=(S[i+c]*(1-fx)+S[i+4+c]*fx)*(1-fy)+(S[j+c]*(1-fx)+S[j+4+c]*fx)*fy;
-      O[oi+3]=255}}
-  ox.putImageData(od,0,0);return o;
-}
+function del(){pages.splice(sel,1);sel=Math.max(0,Math.min(sel,pages.length-1));show(pages.length?view:'home')}
+$('del1').onclick=$('del2').onclick=del;
+$('new').onclick=()=>{if(confirm('Saare pages hata kar naya scan shuru karein?')){pages=[];cache.clear();show('home')}};
+$('recrop').onclick=()=>show('crop');
 
-/* ---------- Filters (local-mean shadow removal) ---------- */
-function filt(c,bw){
-  const w=c.width,h=c.height,id=c.getContext('2d').getImageData(0,0,w,h),d=id.data,W1=w+1;
-  const I=new Uint32Array(W1*(h+1)),G=new Uint8Array(w*h);
-  for(let y=0;y<h;y++){let r=0;for(let x=0;x<w;x++){const i=y*w+x,p=i*4;
-    G[i]=(d[p]*77+d[p+1]*150+d[p+2]*29)>>8;r+=G[i];I[(y+1)*W1+x+1]=I[y*W1+x+1]+r}}
-  const R=Math.max(12,(w/30)|0);
-  for(let y=0;y<h;y++){const a=Math.max(0,y-R),b=Math.min(h,y+R+1);
-    for(let x=0;x<w;x++){const l=Math.max(0,x-R),r=Math.min(w,x+R+1),
-      m=(I[b*W1+r]-I[a*W1+r]-I[b*W1+l]+I[a*W1+l])/((r-l)*(b-a)),p=(y*w+x)*4;
-      if(bw){const v=Math.min(1,Math.max(0,(G[y*w+x]/(m+1)-.72)/.18))*255;d[p]=d[p+1]=d[p+2]=v}
-      else{const k=Math.min(1.8,Math.max(1,235/(m+1)));
-        for(let q=0;q<3;q++)d[p+q]=(d[p+q]*k-128)*1.12+128}}}
-  const o=document.createElement('canvas');o.width=w;o.height=h;o.getContext('2d').putImageData(id,0,0);return o;
-}
-
-/* ---------- Result ---------- */
-function render(){
-  cur=filt(warped,mode==='bw');
-  const c=$('out');c.width=cur.width;c.height=cur.height;c.getContext('2d').drawImage(cur,0,0);
-  $('mc').classList.toggle('on',mode==='color');$('mb').classList.toggle('on',mode==='bw');
-  $('msg').textContent=(pages.length+1)+' page(s) in PDF';
-}
-$('ok').onclick=()=>{
-  $('ok').textContent='Processing…';
-  setTimeout(()=>{warped=warp();mode='color';show('s3');render();$('ok').textContent='Confirm crop ✓'},30);
+$('ok').onclick=async()=>{
+  const b=$('ok');b.textContent='Processing…';
+  for(const P of pages)if(P.dirty||!P.warped){await tick();P.warped=warp(P);P.f={};P.ver++;P.dirty=false}
+  b.textContent='Confirm & continue ✓';show('res');
 };
-$('mc').onclick=()=>{mode='color';render()};
-$('mb').onclick=()=>{mode='bw';render()};
-$('add').onclick=()=>{pages.push(cur);show('s1')};
-$('new').onclick=()=>{pages=[];show('s1')};
 
-function makePDF(){
-  const{jsPDF}=window.jspdf,all=pages.concat(cur),fmt=$('size').value;let doc;
-  all.forEach((c,i)=>{
-    const r=c.width/c.height;let pw,ph,iw,ih,ox=0,oy=0;
-    if(fmt==='a4'){[pw,ph]=r<1?[210,297]:[297,210];
-      const ar=Math.min(r,1/r);
+/* ---------- Result: filters, quality, name ---------- */
+function getF(P){return P.f[mode]||(P.f[mode]=filt(P.warped,mode==='bw'))}
+function renderRes(){
+  const P=pages[sel];if(!P||!P.warped)return;
+  const f=getF(P),c=$('out');c.width=f.width;c.height=f.height;c.getContext('2d').drawImage(f,0,0);
+  $('mc').classList.toggle('on',mode==='color');$('mb').classList.toggle('on',mode==='bw');
+  $('qn').textContent=STEPS[step][2];$('msg').textContent='';updateEst();
+}
+$('mc').onclick=()=>{mode='color';renderRes()};
+$('mb').onclick=()=>{mode='bw';renderRes()};
+$('qr').oninput=e=>{step=+e.target.value;$('qn').textContent=STEPS[step][2];$('est').textContent='…';clearTimeout(window.qt);window.qt=setTimeout(updateEst,250)};
+$('pen').onclick=()=>{const t=$('title');if(t.readOnly){t.readOnly=false;t.focus();t.select();$('pen').textContent='✓'}else{t.readOnly=true;$('pen').textContent='✏️'}};
+$('title').onkeydown=e=>{if(e.key==='Enter')$('pen').click()};
+
+async function getBlob(P){
+  const k=[P.id,P.ver,mode,step].join('|');if(cache.has(k))return cache.get(k);
+  const f=getF(P),[s,q]=STEPS[step],c=document.createElement('canvas');
+  c.width=Math.round(f.width*s);c.height=Math.round(f.height*s);
+  const x=c.getContext('2d');x.imageSmoothingQuality='high';x.drawImage(f,0,0,c.width,c.height);
+  const b=await new Promise(r=>c.toBlob(r,'image/jpeg',q));cache.set(k,b);return b;
+}
+const fmt=n=>n>1048576?(n/1048576).toFixed(1)+' MB':Math.round(n/1024)+' KB';
+async function updateEst(){
+  const t=++estTok;$('est').textContent='calculating…';let tot=0;
+  for(const P of pages){if(!P.warped)continue;const b=await getBlob(P);if(t!==estTok)return;tot+=b.size;await tick()}
+  $('est').textContent='≈ '+fmt(tot)+' • '+pages.length+' page'+(pages.length>1?'s':'');
+}
+
+/* ---------- PDF (all pages merged, same order) ---------- */
+async function makePDF(){
+  const{jsPDF}=window.jspdf,f=$('size').value;let doc;
+  for(let i=0;i<pages.length;i++){
+    const P=pages[i],r=P.warped.width/P.warped.height;let pw,ph,iw,ih,ox=0,oy=0;
+    if(f==='a4'){[pw,ph]=r<1?[210,297]:[297,210];const ar=Math.min(r,1/r);
       if(Math.abs(ar-210/297)/(210/297)<.08){iw=pw;ih=ph}
-      else{const s=Math.min(pw/c.width,ph/c.height);iw=c.width*s;ih=c.height*s;ox=(pw-iw)/2;oy=(ph-ih)/2}}
+      else{const s=Math.min(pw/P.warped.width,ph/P.warped.height);iw=P.warped.width*s;ih=P.warped.height*s;ox=(pw-iw)/2;oy=(ph-ih)/2}}
     else{pw=r<1?210:297;ph=pw/r;iw=pw;ih=ph}
     const o=pw>ph?'l':'p';
     if(!i)doc=new jsPDF({unit:'mm',format:[pw,ph],orientation:o,compress:false});else doc.addPage([pw,ph],o);
-    doc.addImage(c.toDataURL('image/jpeg',.95),'JPEG',ox,oy,iw,ih,undefined,'NONE');
-  });
+    const u8=new Uint8Array(await(await getBlob(P)).arrayBuffer());
+    doc.addImage(u8,'JPEG',ox,oy,iw,ih,undefined,'NONE');
+  }
+  doc.setProperties({title:$('title').value});
   return doc.output('blob');
 }
-const name=()=>'scan-'+new Date().toISOString().slice(0,10)+'.pdf';
-$('dl').onclick=()=>{
-  $('msg').textContent='PDF ban rahi hai…';
-  setTimeout(()=>{const u=URL.createObjectURL(makePDF()),a=document.createElement('a');
-    a.href=u;a.download=name();document.body.appendChild(a);a.click();a.remove();
-    setTimeout(()=>URL.revokeObjectURL(u),5000);$('msg').textContent='Downloaded ✓'},30);
+const fname=()=>($('title').value.trim().replace(/[\\/:*?"<>|]+/g,'-')||'scan')+'.pdf';
+$('dl').onclick=async()=>{
+  $('msg').textContent='PDF ban rahi hai…';await tick();
+  const u=URL.createObjectURL(await makePDF()),a=document.createElement('a');
+  a.href=u;a.download=fname();document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(u),8000);$('msg').textContent='Downloaded ✓';
 };
 $('sh').onclick=async()=>{
-  const f=new File([makePDF()],name(),{type:'application/pdf'});
-  if(navigator.canShare&&navigator.canShare({files:[f]})){
-    try{await navigator.share({files:[f],title:'Scanned document'})}catch(e){}
-  }else $('msg').textContent='Is browser me share support nahi hai, Download use karo.';
+  $('msg').textContent='PDF ban rahi hai…';await tick();
+  const f=new File([await makePDF()],fname(),{type:'application/pdf'});$('msg').textContent='';
+  if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:$('title').value})}catch(e){}}
+  else $('msg').textContent='Is browser me share support nahi hai, Download use karo.';
 };
 </script></body></html>
