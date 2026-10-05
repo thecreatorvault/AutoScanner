@@ -335,4 +335,15 @@ async function doSave(){
 $('title').oninput=save;$('size').onchange=save;
 (async()=>{
   const d=await idb('get');if(!d||!d.ps||!d.ps.length)return;
-  $('msg').textCo
+  $('msg').textContent='';
+  for(const o of d.ps){
+    const img=new Image(),u=URL.createObjectURL(o.blob);img.src=u;await img.decode();
+    const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;
+    c.getContext('2d').drawImage(img,0,0);URL.revokeObjectURL(u);
+    pages.push({id:++uid,src:c,blob:o.blob,quad:o.quad,dirty:true,ver:0,f:{}});
+  }
+  $('title').value=d.title;mode=d.mode;step=d.step;$('size').value=d.size;$('qr').value=step;
+  sel=Math.min(d.sel,pages.length-1);
+  if(d.view==='res'){for(const P of pages){await tick();P.warped=warp(P);P.dirty=false;P.ver++}show('res')}else show('crop');
+})();
+</script></body></html>
